@@ -6,6 +6,7 @@ import { AddPolicyDialog } from "@/components/AddPolicyDialog";
 import { EmailAutomationPanel } from "@/components/EmailAutomationPanel";
 import { AgentManagement } from "@/components/AgentManagement";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
+import { StorageUploader } from "@/components/StorageUploader";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -132,12 +133,16 @@ const Index = () => {
               <TabsList>
                 <TabsTrigger value="policies">Policies</TabsTrigger>
                 <TabsTrigger value="agents">Agent Management</TabsTrigger>
+                <TabsTrigger value="storage">Storage Uploader</TabsTrigger>
               </TabsList>
               <TabsContent value="policies" className="mt-6">
                 <PolicyTable policies={policies} />
               </TabsContent>
               <TabsContent value="agents" className="mt-6">
                 <AgentManagement />
+              </TabsContent>
+              <TabsContent value="storage" className="mt-6">
+                <StorageUploader />
               </TabsContent>
             </Tabs>
           </div>
