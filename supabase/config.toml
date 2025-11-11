@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.trigger-outlook-emails]
 verify_jwt = false
+
+[functions.bulk-import-policies]
+verify_jwt = false
