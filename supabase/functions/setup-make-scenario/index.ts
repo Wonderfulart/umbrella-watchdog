@@ -30,12 +30,15 @@ Deno.serve(async (req) => {
     const connections = await connectionsResponse.json();
     console.log('Found connections:', connections);
 
-    // Find Outlook/Office365 connection
+    // Find Outlook/Office365/Microsoft connection
     const outlookConnection = connections.connections?.find(
       (conn: any) => 
         conn.name?.toLowerCase().includes('outlook') || 
         conn.name?.toLowerCase().includes('office') ||
-        conn.accountName?.toLowerCase().includes('outlook')
+        conn.name?.toLowerCase().includes('microsoft') ||
+        conn.accountName?.toLowerCase().includes('outlook') ||
+        conn.accountName?.toLowerCase().includes('azure') ||
+        conn.accountLabel?.toLowerCase().includes('microsoft')
     );
 
     if (!outlookConnection) {
