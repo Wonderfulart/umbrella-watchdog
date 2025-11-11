@@ -1,8 +1,11 @@
 import { corsHeaders } from '../_shared/cors.ts';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const MAKE_API_TOKEN = Deno.env.get('MAKE_API');
 const MAKE_TEAM_ID = '1471864';
 const MAKE_BASE_URL = 'https://us2.make.com/api/v2';
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,7 +15,32 @@ Deno.serve(async (req) => {
   try {
     console.log('Starting Make.com scenario setup...');
 
-    // Step 1: List all connections to find Outlook
+    // Initialize Supabase client
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Step 1: Get or create automation_config
+    let { data: config, error: configError } = await supabase
+      .from('automation_config')
+      .select('*')
+      .single();
+
+    if (configError && configError.code === 'PGRST116') {
+      // No config exists, create one
+      const { data: newConfig, error: insertError } = await supabase
+        .from('automation_config')
+        .insert({ webhook_url: '' })
+        .select()
+        .single();
+      
+      if (insertError) throw insertError;
+      config = newConfig;
+    } else if (configError) {
+      throw configError;
+    }
+
+    console.log('Current config:', config);
+
+    // Step 2: Find Outlook/Microsoft connection
     const connectionsResponse = await fetch(
       `${MAKE_BASE_URL}/connections?teamId=${MAKE_TEAM_ID}`,
       {
@@ -30,8 +58,8 @@ Deno.serve(async (req) => {
     const connections = await connectionsResponse.json();
     console.log('Found connections:', connections);
 
-    // Find Outlook/Office365/Microsoft connection
-    const outlookConnection = connections.connections?.find(
+    // Find Outlook/Microsoft connection, prefer policyreminder@prlinsurance.com
+    const microsoftConnections = connections.connections?.filter(
       (conn: any) => 
         conn.name?.toLowerCase().includes('outlook') || 
         conn.name?.toLowerCase().includes('office') ||
@@ -41,11 +69,15 @@ Deno.serve(async (req) => {
         conn.accountLabel?.toLowerCase().includes('microsoft')
     );
 
+    const outlookConnection = microsoftConnections?.find(
+      (conn: any) => conn.metadata?.email === 'policyreminder@prlinsurance.com'
+    ) || microsoftConnections?.[0];
+
     if (!outlookConnection) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'No Outlook connection found. Please connect your Outlook account in Make.com first.',
+          error: 'No Microsoft/Outlook connection found. Please connect your Outlook account in Make.com first.',
           availableConnections: connections.connections?.map((c: any) => ({
             name: c.name,
             type: c.accountName,
@@ -60,10 +92,7 @@ Deno.serve(async (req) => {
 
     console.log('Found Outlook connection:', outlookConnection);
 
-    // Step 2: Get webhook details to find scenario ID
-    const webhookUrl = 'https://hook.us2.make.com/wxml33sjjwewwo2jbnkvyxmkm3eook7a';
-    const webhookId = webhookUrl.split('/').pop();
-    
+    // Step 3: Find or create webhook
     const webhooksResponse = await fetch(
       `${MAKE_BASE_URL}/hooks?teamId=${MAKE_TEAM_ID}`,
       {
@@ -74,52 +103,119 @@ Deno.serve(async (req) => {
       }
     );
 
-    const webhooks = await webhooksResponse.json();
-    const webhook = webhooks.hooks?.find((h: any) => h.url === webhookUrl || h.name?.includes(webhookId));
-    
-    if (!webhook) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Webhook not found in your Make.com account',
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+    if (!webhooksResponse.ok) {
+      throw new Error(`Failed to fetch webhooks: ${webhooksResponse.statusText}`);
     }
 
-    console.log('Found webhook:', webhook);
-    const scenarioId = webhook.scenarioId;
+    const webhooksData = await webhooksResponse.json();
+    console.log('Existing webhooks:', webhooksData);
 
-    // Step 3: Build the complete scenario blueprint
+    let webhook = webhooksData.hooks?.find((h: any) => 
+      h.url === config?.webhook_url || h.name?.includes('PRL Policy')
+    );
+
+    if (!webhook) {
+      console.log('Creating new webhook...');
+      const createWebhookResponse = await fetch(
+        `${MAKE_BASE_URL}/hooks`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${MAKE_API_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: 'PRL Policy Automation Webhook',
+            teamId: MAKE_TEAM_ID,
+            typeName: 'gateway-webhook',
+            method: true,
+            header: true,
+            stringify: false,
+          }),
+        }
+      );
+
+      if (!createWebhookResponse.ok) {
+        const errorText = await createWebhookResponse.text();
+        throw new Error(`Failed to create webhook: ${errorText}`);
+      }
+
+      const webhookResult = await createWebhookResponse.json();
+      webhook = webhookResult.hook;
+      console.log('Created new webhook:', webhook);
+
+      // Update config with new webhook URL
+      await supabase
+        .from('automation_config')
+        .update({ webhook_url: webhook.url })
+        .eq('id', config!.id);
+    }
+
+    console.log('Using webhook:', webhook);
+
+    // Step 4: Find or create scenario
+    let scenarioId = webhook.scenarioId || config?.make_scenario_id;
+
+    if (!scenarioId) {
+      console.log('Creating new scenario...');
+      
+      // Build minimal blueprint for scenario creation
+      const initialBlueprint = {
+        name: 'Policy Email Automation',
+        scheduling: { type: 'indefinitely' },
+        flow: [
+          {
+            id: 1,
+            module: 'gateway:CustomWebHook',
+            version: 1,
+            parameters: { hook: webhook.id, maxResults: 1 },
+            mapper: {},
+            metadata: {
+              designer: { x: 0, y: 0 },
+              restore: {},
+              expect: [{ name: 'policies', type: 'array', label: 'Policies', required: true }],
+            },
+          },
+        ],
+      };
+
+      const createScenarioResponse = await fetch(
+        `${MAKE_BASE_URL}/scenarios?teamId=${MAKE_TEAM_ID}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${MAKE_API_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(initialBlueprint),
+        }
+      );
+
+      if (!createScenarioResponse.ok) {
+        const errorText = await createScenarioResponse.text();
+        throw new Error(`Failed to create scenario: ${errorText}`);
+      }
+
+      const scenarioResult = await createScenarioResponse.json();
+      scenarioId = scenarioResult.scenario.id;
+      console.log('Created new scenario:', scenarioId);
+    }
+
+    // Step 5: Build complete scenario blueprint
     const scenarioBlueprint = {
       name: 'Policy Email Automation',
-      scheduling: {
-        type: 'indefinitely',
-      },
+      scheduling: { type: 'indefinitely' },
       flow: [
         {
           id: 1,
           module: 'gateway:CustomWebHook',
           version: 1,
-          parameters: {
-            hook: webhook.id,
-            maxResults: 1,
-          },
+          parameters: { hook: webhook.id, maxResults: 1 },
           mapper: {},
           metadata: {
             designer: { x: 0, y: 0 },
             restore: {},
-            expect: [
-              {
-                name: 'policies',
-                type: 'array',
-                label: 'Policies',
-                required: true,
-              },
-            ],
+            expect: [{ name: 'policies', type: 'array', label: 'Policies', required: true }],
           },
         },
         {
@@ -127,16 +223,10 @@ Deno.serve(async (req) => {
           module: 'builtin:BasicIterator',
           version: 1,
           parameters: {},
-          mapper: {
-            array: '{{1.policies}}',
-          },
+          mapper: { array: '{{1.policies}}' },
           metadata: {
             designer: { x: 300, y: 0 },
-            restore: {
-              expect: {
-                array: { mode: 'edit' },
-              },
-            },
+            restore: { expect: { array: { mode: 'edit' } } },
           },
         },
         {
@@ -145,9 +235,7 @@ Deno.serve(async (req) => {
           version: 1,
           parameters: {},
           mapper: null,
-          metadata: {
-            designer: { x: 600, y: 0 },
-          },
+          metadata: { designer: { x: 600, y: 0 } },
           routes: [
             {
               flow: [
@@ -155,9 +243,7 @@ Deno.serve(async (req) => {
                   id: 4,
                   module: 'microsoft-365-email:ActionSendAnEmail',
                   version: 3,
-                  parameters: {
-                    account: outlookConnection.id,
-                  },
+                  parameters: { account: outlookConnection.id },
                   mapper: {
                     to: '{{2.client_email}}',
                     cc: '{{2.agent_email}}',
@@ -240,40 +326,21 @@ Deno.serve(async (req) => {
                   version: 3,
                   parameters: {},
                   mapper: {
-                    url: 'https://mkfaphusizsjgcpkepld.supabase.co/functions/v1/update-email-status',
+                    url: `${SUPABASE_URL}/functions/v1/update-email-status`,
                     method: 'post',
                     headers: [
-                      {
-                        name: 'Content-Type',
-                        value: 'application/json',
-                      },
-                      {
-                        name: 'Authorization',
-                        value: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZmFwaHVzaXpzamdjcGtlcGxkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3OTc4NDEsImV4cCI6MjA3ODM3Mzg0MX0.eL0ny4LyK1GviQB8IbC-MXS3AlRnqIOYC6Tq6f6ROdo',
-                      },
+                      { name: 'Content-Type', value: 'application/json' },
+                      { name: 'Authorization', value: `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}` },
                     ],
                     qs: [],
-                    body: JSON.stringify({
-                      policy_id: '{{2.id}}',
-                      email_type: 'email1',
-                    }),
+                    body: JSON.stringify({ policy_id: '{{2.id}}', email_type: 'email1' }),
                   },
-                  metadata: {
-                    designer: { x: 1200, y: -150 },
-                  },
+                  metadata: { designer: { x: 1200, y: -150 } },
                 },
               ],
               filter: {
                 name: 'Email 1 Route',
-                conditions: [
-                  [
-                    {
-                      a: '{{2.email_type}}',
-                      o: 'text:equal',
-                      b: 'email1',
-                    },
-                  ],
-                ],
+                conditions: [[{ a: '{{2.email_type}}', o: 'text:equal', b: 'email1' }]],
               },
             },
             {
@@ -282,9 +349,7 @@ Deno.serve(async (req) => {
                   id: 6,
                   module: 'microsoft-365-email:ActionSendAnEmail',
                   version: 3,
-                  parameters: {
-                    account: outlookConnection.id,
-                  },
+                  parameters: { account: outlookConnection.id },
                   mapper: {
                     to: '{{2.client_email}}',
                     cc: '{{2.agent_email}}',
@@ -367,40 +432,21 @@ Deno.serve(async (req) => {
                   version: 3,
                   parameters: {},
                   mapper: {
-                    url: 'https://mkfaphusizsjgcpkepld.supabase.co/functions/v1/update-email-status',
+                    url: `${SUPABASE_URL}/functions/v1/update-email-status`,
                     method: 'post',
                     headers: [
-                      {
-                        name: 'Content-Type',
-                        value: 'application/json',
-                      },
-                      {
-                        name: 'Authorization',
-                        value: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZmFwaHVzaXpzamdjcGtlcGxkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3OTc4NDEsImV4cCI6MjA3ODM3Mzg0MX0.eL0ny4LyK1GviQB8IbC-MXS3AlRnqIOYC6Tq6f6ROdo',
-                      },
+                      { name: 'Content-Type', value: 'application/json' },
+                      { name: 'Authorization', value: `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}` },
                     ],
                     qs: [],
-                    body: JSON.stringify({
-                      policy_id: '{{2.id}}',
-                      email_type: 'email2',
-                    }),
+                    body: JSON.stringify({ policy_id: '{{2.id}}', email_type: 'email2' }),
                   },
-                  metadata: {
-                    designer: { x: 1200, y: 150 },
-                  },
+                  metadata: { designer: { x: 1200, y: 150 } },
                 },
               ],
               filter: {
                 name: 'Email 2 Route',
-                conditions: [
-                  [
-                    {
-                      a: '{{2.email_type}}',
-                      o: 'text:equal',
-                      b: 'email2',
-                    },
-                  ],
-                ],
+                conditions: [[{ a: '{{2.email_type}}', o: 'text:equal', b: 'email2' }]],
               },
             },
           ],
@@ -412,25 +458,16 @@ Deno.serve(async (req) => {
           parameters: {},
           mapper: {
             status: '200',
-            body: JSON.stringify({
-              success: true,
-              processed: '{{length(1.policies)}}',
-            }),
-            headers: [
-              {
-                key: 'Content-Type',
-                value: 'application/json',
-              },
-            ],
+            body: JSON.stringify({ success: true, processed: '{{length(1.policies)}}' }),
+            headers: [{ key: 'Content-Type', value: 'application/json' }],
           },
-          metadata: {
-            designer: { x: 1500, y: 0 },
-          },
+          metadata: { designer: { x: 1500, y: 0 } },
         },
       ],
     };
 
-    // Step 4: Update the scenario
+    // Step 6: Update scenario with full blueprint
+    console.log('Updating scenario with complete blueprint...');
     const updateResponse = await fetch(
       `${MAKE_BASE_URL}/scenarios/${scenarioId}?teamId=${MAKE_TEAM_ID}`,
       {
@@ -449,15 +486,31 @@ Deno.serve(async (req) => {
     }
 
     const updatedScenario = await updateResponse.json();
-    console.log('Scenario updated successfully:', updatedScenario);
+    console.log('Scenario updated successfully');
+
+    // Step 7: Persist everything to automation_config
+    const { error: updateError } = await supabase
+      .from('automation_config')
+      .update({
+        webhook_url: webhook.url,
+        make_scenario_id: scenarioId.toString(),
+        make_connection_id: outlookConnection.id.toString(),
+      })
+      .eq('id', config!.id);
+
+    if (updateError) {
+      console.error('Failed to update automation_config:', updateError);
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         message: 'Make.com scenario configured successfully',
-        scenarioId,
+        webhookUrl: webhook.url,
+        scenarioId: scenarioId,
         outlookConnectionId: outlookConnection.id,
         outlookConnectionName: outlookConnection.name,
+        outlookEmail: outlookConnection.metadata?.email,
       }),
       {
         status: 200,
