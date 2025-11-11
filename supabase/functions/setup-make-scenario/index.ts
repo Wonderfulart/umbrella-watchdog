@@ -172,6 +172,9 @@ Deno.serve(async (req) => {
     .content { padding: 30px; background: #f9f9f9; }
     .policy-card { background: white; border-left: 4px solid #0066cc; padding: 20px; margin: 20px 0; }
     .cta-button { display: inline-block; padding: 15px 30px; background: #0066cc; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .agent-signature { background: white; padding: 20px; margin: 20px 0; border-top: 2px solid #0066cc; }
+    .agent-info { display: flex; align-items: center; gap: 15px; }
+    .agent-logo { width: 60px; height: 60px; object-fit: contain; }
     .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
   </style>
 </head>
@@ -195,11 +198,19 @@ Deno.serve(async (req) => {
         <a href="{{2.submission_link}}" class="cta-button">Submit Renewal Form</a>
       </center>
       <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
-      <p>Best regards,<br>Your Insurance Team</p>
+      <div class="agent-signature">
+        <div class="agent-info">
+          <img src="{{2.agent_company_logo_url}}" alt="Company Logo" class="agent-logo" />
+          <div>
+            <p style="margin: 0; font-weight: bold;">{{2.agent_first_name}} {{2.agent_last_name}}</p>
+            <p style="margin: 5px 0 0 0; color: #666;">Insurance Agent</p>
+            <p style="margin: 5px 0 0 0;"><a href="mailto:{{2.agent_email}}" style="color: #0066cc;">{{2.agent_email}}</a></p>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="footer">
       <p>This is an automated reminder. Please do not reply to this email.</p>
-      <p>Agent Contact: {{2.agent_email}}</p>
     </div>
   </div>
 </body>
@@ -287,6 +298,9 @@ Deno.serve(async (req) => {
     .content { padding: 30px; background: #f9f9f9; }
     .policy-card { background: white; border-left: 4px solid #dc3545; padding: 20px; margin: 20px 0; }
     .cta-button { display: inline-block; padding: 15px 30px; background: #dc3545; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .agent-signature { background: white; padding: 20px; margin: 20px 0; border-top: 2px solid #dc3545; }
+    .agent-info { display: flex; align-items: center; gap: 15px; }
+    .agent-logo { width: 60px; height: 60px; object-fit: contain; }
     .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
   </style>
 </head>
@@ -313,11 +327,19 @@ Deno.serve(async (req) => {
         <a href="{{2.submission_link}}" class="cta-button">SUBMIT NOW</a>
       </center>
       <p>If you have already submitted your renewal or have questions, please contact your agent immediately.</p>
-      <p>Best regards,<br>Your Insurance Team</p>
+      <div class="agent-signature">
+        <div class="agent-info">
+          <img src="{{2.agent_company_logo_url}}" alt="Company Logo" class="agent-logo" />
+          <div>
+            <p style="margin: 0; font-weight: bold;">{{2.agent_first_name}} {{2.agent_last_name}}</p>
+            <p style="margin: 5px 0 0 0; color: #666;">Insurance Agent</p>
+            <p style="margin: 5px 0 0 0;"><a href="mailto:{{2.agent_email}}" style="color: #dc3545;">{{2.agent_email}}</a></p>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="footer">
       <p>This is an automated reminder. Please do not reply to this email.</p>
-      <p><strong>Agent Contact:</strong> {{2.agent_email}}</p>
     </div>
   </div>
 </body>
