@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PolicySummaryCards } from "@/components/PolicySummaryCards";
 import { PolicyTable } from "@/components/PolicyTable";
 import { AddPolicyDialog } from "@/components/AddPolicyDialog";
+import { EmailAutomationPanel } from "@/components/EmailAutomationPanel";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -71,7 +72,16 @@ const Index = () => {
       (p) => new Date(p.expiration_date) < today && !p.jotform_submitted
     ).length;
 
-    return { upcoming, pending, completed, overdue };
+    const email1Count = policies.filter((p) => {
+      const expDate = new Date(p.expiration_date);
+      return expDate >= today && expDate <= upcoming37Days && !p.jotform_submitted && !p.email1_sent;
+    }).length;
+
+    const email2Count = policies.filter(
+      (p) => new Date(p.expiration_date) < today && !p.jotform_submitted && !p.email2_sent
+    ).length;
+
+    return { upcoming, pending, completed, overdue, email1Count, email2Count };
   };
 
   const stats = calculateStats();
@@ -103,6 +113,11 @@ const Index = () => {
               pendingCount={stats.pending}
               completedCount={stats.completed}
               overdueCount={stats.overdue}
+            />
+            <EmailAutomationPanel 
+              email1Count={stats.email1Count}
+              email2Count={stats.email2Count}
+              onRefresh={fetchPolicies}
             />
             <PolicyTable policies={policies} />
           </div>

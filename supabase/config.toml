@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.update-email-status]
 verify_jwt = false
+
+[functions.setup-make-scenario]
+verify_jwt = false
+
+[functions.trigger-outlook-emails]
+verify_jwt = false

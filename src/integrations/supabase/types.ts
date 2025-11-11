@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      automation_config: {
+        Row: {
+          created_at: string | null
+          id: string
+          make_connection_id: string | null
+          make_scenario_id: string | null
+          updated_at: string | null
+          webhook_url: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          make_connection_id?: string | null
+          make_scenario_id?: string | null
+          updated_at?: string | null
+          webhook_url: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          make_connection_id?: string | null
+          make_scenario_id?: string | null
+          updated_at?: string | null
+          webhook_url?: string
+        }
+        Relationships: []
+      }
       policies: {
         Row: {
           agent_email: string
