@@ -70,7 +70,6 @@ serve(async (req) => {
           client_email: row[columnMapping.client_email],
           agent_email: row[columnMapping.agent_email],
           expiration_date: row[columnMapping.expiration_date],
-          submission_link: row[columnMapping.submission_link],
           company_name: row[columnMapping.company_name],
         };
 
@@ -82,7 +81,6 @@ serve(async (req) => {
           "client_email",
           "agent_email",
           "expiration_date",
-          "submission_link",
           "company_name",
         ];
 
@@ -109,10 +107,15 @@ serve(async (req) => {
         const assignedAgent = agents[currentIndex % agents.length];
         currentIndex++;
 
+        // Auto-generate submission link
+        const baseUrl = "https://form.jotform.com/250873904844061";
+        const submissionLink = `${baseUrl}?policyNumber=${encodeURIComponent(policyData.policy_number)}&typeA=${encodeURIComponent(policyData.customer_number)}`;
+
         // Insert policy with agent assignment
         const { error: insertError } = await supabase.from("policies").insert([
           {
             ...policyData,
+            submission_link: submissionLink,
             agent_first_name: assignedAgent.first_name,
             agent_last_name: assignedAgent.last_name,
             agent_company_logo_url: assignedAgent.company_logo_url,

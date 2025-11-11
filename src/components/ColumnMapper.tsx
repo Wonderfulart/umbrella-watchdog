@@ -10,7 +10,6 @@ const REQUIRED_FIELDS = [
   { key: "client_email", label: "Client Email *" },
   { key: "agent_email", label: "Agent Email *" },
   { key: "expiration_date", label: "Expiration Date *" },
-  { key: "submission_link", label: "Submission Link *" },
   { key: "company_name", label: "Company Name *" },
 ];
 
