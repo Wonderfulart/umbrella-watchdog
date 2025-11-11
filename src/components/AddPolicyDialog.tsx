@@ -29,12 +29,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const formSchema = z.object({
+  customerNumber: z.string().min(1, "Customer number is required"),
   policyNumber: z.string().min(1, "Policy number is required"),
-  clientFirstName: z.string().min(1, "Client name is required"),
+  clientName: z.string().min(2, "Client name is required (full name)"),
+  companyName: z.string().min(1, "Company name is required"),
   clientEmail: z.string().email("Invalid email address"),
   agentEmail: z.string().email("Invalid email address"),
   expirationDate: z.date({ required_error: "Expiration date is required" }),
-  submissionLink: z.string().url("Invalid URL"),
 });
 
 interface AddPolicyDialogProps {
@@ -48,24 +49,30 @@ export const AddPolicyDialog = ({ onPolicyAdded }: AddPolicyDialogProps) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      customerNumber: "",
       policyNumber: "",
-      clientFirstName: "",
+      clientName: "",
+      companyName: "",
       clientEmail: "",
       agentEmail: "",
-      submissionLink: "",
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
+      const baseUrl = "https://form.jotform.com/250873904844061";
+      const submissionLink = `${baseUrl}?policyNumber=${encodeURIComponent(values.policyNumber)}&typeA=${encodeURIComponent(values.customerNumber)}`;
+      
       const { error } = await supabase.from("policies").insert({
+        customer_number: values.customerNumber,
         policy_number: values.policyNumber,
-        client_first_name: values.clientFirstName,
+        client_first_name: values.clientName,
+        company_name: values.companyName,
         client_email: values.clientEmail,
         agent_email: values.agentEmail,
         expiration_date: format(values.expirationDate, "yyyy-MM-dd"),
-        submission_link: values.submissionLink,
+        submission_link: submissionLink,
       });
 
       if (error) throw error;
@@ -99,12 +106,12 @@ export const AddPolicyDialog = ({ onPolicyAdded }: AddPolicyDialogProps) => {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="policyNumber"
+              name="customerNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Policy Number</FormLabel>
+                  <FormLabel>Customer Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="UMB-2024-001" {...field} />
+                    <Input placeholder="10001" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -112,12 +119,38 @@ export const AddPolicyDialog = ({ onPolicyAdded }: AddPolicyDialogProps) => {
             />
             <FormField
               control={form.control}
-              name="clientFirstName"
+              name="policyNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Client First Name</FormLabel>
+                  <FormLabel>Policy Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="John" {...field} />
+                    <Input placeholder="UMB-2025-001" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="clientName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Client Name (Full Name)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="John Smith" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="companyName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company Name (Insurance Carrier)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Acme Insurance Co." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -180,19 +213,6 @@ export const AddPolicyDialog = ({ onPolicyAdded }: AddPolicyDialogProps) => {
                       />
                     </PopoverContent>
                   </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="submissionLink"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>JotForm Submission Link</FormLabel>
-                  <FormControl>
-                    <Input type="url" placeholder="https://form.jotform.com/..." {...field} />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

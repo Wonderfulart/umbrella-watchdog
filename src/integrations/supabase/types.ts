@@ -19,7 +19,9 @@ export type Database = {
           agent_email: string
           client_email: string
           client_first_name: string
+          company_name: string
           created_at: string | null
+          customer_number: string
           email1_sent: boolean | null
           email1_sent_date: string | null
           email2_sent: boolean | null
@@ -35,7 +37,9 @@ export type Database = {
           agent_email: string
           client_email: string
           client_first_name: string
+          company_name: string
           created_at?: string | null
+          customer_number: string
           email1_sent?: boolean | null
           email1_sent_date?: string | null
           email2_sent?: boolean | null
@@ -51,7 +55,9 @@ export type Database = {
           agent_email?: string
           client_email?: string
           client_first_name?: string
+          company_name?: string
           created_at?: string | null
+          customer_number?: string
           email1_sent?: boolean | null
           email1_sent_date?: string | null
           email2_sent?: boolean | null

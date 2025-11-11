@@ -8,11 +8,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface Policy {
   id: string;
+  customer_number: string;
   policy_number: string;
   client_first_name: string;
+  company_name: string;
   client_email: string;
   agent_email: string;
   expiration_date: string;
+  submission_link: string;
   jotform_submitted: boolean;
   email1_sent: boolean;
   email2_sent: boolean;
