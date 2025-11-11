@@ -128,8 +128,8 @@ Deno.serve(async (req) => {
             name: 'PRL Policy Automation Webhook',
             teamId: MAKE_TEAM_ID,
             typeName: 'gateway-webhook',
-            method: true,
-            header: true,
+            method: false,
+            headers: false,
             stringify: false,
           }),
         }
@@ -153,11 +153,9 @@ Deno.serve(async (req) => {
 
     console.log('Using webhook:', webhook);
 
-    // Step 4: Find or create scenario
-    let scenarioId = webhook.scenarioId || config?.make_scenario_id;
-
-    if (!scenarioId) {
-      console.log('Creating new scenario...');
+    // Step 4: Always create a new scenario
+    console.log('Creating new scenario...');
+    let scenarioId;
       
       // Build minimal blueprint for scenario creation
       const initialBlueprint = {
@@ -199,7 +197,6 @@ Deno.serve(async (req) => {
       const scenarioResult = await createScenarioResponse.json();
       scenarioId = scenarioResult.scenario.id;
       console.log('Created new scenario:', scenarioId);
-    }
 
     // Step 5: Build complete scenario blueprint
     const scenarioBlueprint = {
