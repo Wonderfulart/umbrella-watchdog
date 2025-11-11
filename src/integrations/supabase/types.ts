@@ -14,10 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      agents: {
+        Row: {
+          company_logo_url: string | null
+          created_at: string | null
+          email: string
+          first_name: string
+          id: string
+          is_active: boolean | null
+          last_name: string
+        }
+        Insert: {
+          company_logo_url?: string | null
+          created_at?: string | null
+          email: string
+          first_name: string
+          id?: string
+          is_active?: boolean | null
+          last_name: string
+        }
+        Update: {
+          company_logo_url?: string | null
+          created_at?: string | null
+          email?: string
+          first_name?: string
+          id?: string
+          is_active?: boolean | null
+          last_name?: string
+        }
+        Relationships: []
+      }
       automation_config: {
         Row: {
           created_at: string | null
           id: string
+          last_assigned_agent_index: number | null
           make_connection_id: string | null
           make_scenario_id: string | null
           updated_at: string | null
@@ -26,6 +57,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          last_assigned_agent_index?: number | null
           make_connection_id?: string | null
           make_scenario_id?: string | null
           updated_at?: string | null
@@ -34,6 +66,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          last_assigned_agent_index?: number | null
           make_connection_id?: string | null
           make_scenario_id?: string | null
           updated_at?: string | null
@@ -43,7 +76,10 @@ export type Database = {
       }
       policies: {
         Row: {
+          agent_company_logo_url: string | null
           agent_email: string
+          agent_first_name: string | null
+          agent_last_name: string | null
           client_email: string
           client_first_name: string
           company_name: string
@@ -61,7 +97,10 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          agent_company_logo_url?: string | null
           agent_email: string
+          agent_first_name?: string | null
+          agent_last_name?: string | null
           client_email: string
           client_first_name: string
           company_name: string
@@ -79,7 +118,10 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          agent_company_logo_url?: string | null
           agent_email?: string
+          agent_first_name?: string | null
+          agent_last_name?: string | null
           client_email?: string
           client_first_name?: string
           company_name?: string

@@ -25,6 +25,9 @@ interface Policy {
   jotform_submitted: boolean;
   email1_sent: boolean;
   email2_sent: boolean;
+  agent_first_name?: string;
+  agent_last_name?: string;
+  agent_company_logo_url?: string;
 }
 
 interface PolicyTableProps {
@@ -92,7 +95,7 @@ export const PolicyTable = ({ policies }: PolicyTableProps) => {
               <TableHead>Client Name</TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Client Email</TableHead>
-              <TableHead>Agent Email</TableHead>
+              <TableHead>Agent</TableHead>
               <TableHead>Expiration Date</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Email Status</TableHead>
@@ -113,7 +116,18 @@ export const PolicyTable = ({ policies }: PolicyTableProps) => {
                   <TableCell>{policy.client_first_name}</TableCell>
                   <TableCell>{policy.company_name}</TableCell>
                   <TableCell>{policy.client_email}</TableCell>
-                  <TableCell>{policy.agent_email}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {policy.agent_company_logo_url && (
+                        <img src={policy.agent_company_logo_url} alt="Logo" className="h-6 w-6 object-contain" />
+                      )}
+                      <span>
+                        {policy.agent_first_name && policy.agent_last_name
+                          ? `${policy.agent_first_name} ${policy.agent_last_name}`
+                          : policy.agent_email}
+                      </span>
+                    </div>
+                  </TableCell>
                   <TableCell>{format(new Date(policy.expiration_date), "MMM d, yyyy")}</TableCell>
                   <TableCell>{getStatusBadge(policy)}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">

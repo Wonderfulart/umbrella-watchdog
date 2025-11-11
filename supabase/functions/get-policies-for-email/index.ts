@@ -16,6 +16,9 @@ interface PolicyForEmail {
   expiration_date: string;
   submission_link: string;
   email_type: 'email1' | 'email2';
+  agent_first_name: string;
+  agent_last_name: string;
+  agent_company_logo_url: string;
 }
 
 Deno.serve(async (req) => {
@@ -81,6 +84,9 @@ Deno.serve(async (req) => {
       expiration_date: policy.expiration_date,
       submission_link: policy.submission_link,
       email_type: 'email1' as const,
+      agent_first_name: policy.agent_first_name || '',
+      agent_last_name: policy.agent_last_name || '',
+      agent_company_logo_url: policy.agent_company_logo_url || '',
     }));
 
     const policiesForEmail2: PolicyForEmail[] = (email2Policies || []).map(policy => ({
@@ -94,6 +100,9 @@ Deno.serve(async (req) => {
       expiration_date: policy.expiration_date,
       submission_link: policy.submission_link,
       email_type: 'email2' as const,
+      agent_first_name: policy.agent_first_name || '',
+      agent_last_name: policy.agent_last_name || '',
+      agent_company_logo_url: policy.agent_company_logo_url || '',
     }));
 
     const allPolicies = [...policiesForEmail1, ...policiesForEmail2];
