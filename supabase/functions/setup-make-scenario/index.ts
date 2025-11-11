@@ -159,8 +159,8 @@ Deno.serve(async (req) => {
                     to: '{{2.client_email}}',
                     cc: '{{2.agent_email}}',
                     bcc: 'Shustinedominiquie@gmail.com',
-                    from: '',
-                    subject: 'Reminder: Your {{2.company_name}} Policy Expires in 37 Days',
+                    from: 'PRL Insurance <policyreminder@prlinsurance.com>',
+                    subject: 'Annual Umbrella Policy Review - New Format',
                     contentType: 'HTML',
                     body: `<!DOCTYPE html>
 <html>
@@ -168,11 +168,13 @@ Deno.serve(async (req) => {
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: #0066cc; color: white; padding: 20px; text-align: center; }
+    .header { background: #003B72; color: white; padding: 30px 20px; text-align: center; }
+    .header img { max-width: 200px; height: auto; margin-bottom: 15px; }
+    .header h1 { margin: 0; font-size: 24px; }
     .content { padding: 30px; background: #f9f9f9; }
-    .policy-card { background: white; border-left: 4px solid #0066cc; padding: 20px; margin: 20px 0; }
-    .cta-button { display: inline-block; padding: 15px 30px; background: #0066cc; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-    .agent-signature { background: white; padding: 20px; margin: 20px 0; border-top: 2px solid #0066cc; }
+    .policy-card { background: white; border-left: 4px solid #003B72; padding: 20px; margin: 20px 0; }
+    .cta-button { display: inline-block; padding: 15px 30px; background: #003B72; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .agent-signature { background: white; padding: 20px; margin: 20px 0; border-top: 2px solid #003B72; }
     .agent-info { display: flex; align-items: center; gap: 15px; }
     .agent-logo { width: 60px; height: 60px; object-fit: contain; }
     .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
@@ -181,11 +183,12 @@ Deno.serve(async (req) => {
 <body>
   <div class="container">
     <div class="header">
-      <h1>Policy Renewal Reminder</h1>
+      <img src="https://mkfaphusizsjgcpkepld.supabase.co/storage/v1/object/public/email-assets/prl-hero-logo.png" alt="PRL Insurance Logo" />
+      <h1>Umbrella Policy Review</h1>
     </div>
     <div class="content">
       <p>Hi {{2.client_first_name}},</p>
-      <p>This is a friendly reminder that your insurance policy is set to expire soon.</p>
+      <p>We are transitioning our annual umbrella review questionnaires to a new format. Please see the link below for your umbrella renewal. We want to make sure we have the most up to date information. If you prefer, please call our office to talk to an agent.</p>
       <div class="policy-card">
         <h3>Policy Details</h3>
         <p><strong>Policy Number:</strong> {{2.policy_number}}</p>
@@ -193,24 +196,23 @@ Deno.serve(async (req) => {
         <p><strong>Expiration Date:</strong> {{2.expiration_date}}</p>
         <p><strong>Customer Number:</strong> {{2.customer_number}}</p>
       </div>
-      <p>To ensure continuous coverage, please submit your renewal form as soon as possible.</p>
       <center>
-        <a href="{{2.submission_link}}" class="cta-button">Submit Renewal Form</a>
+        <a href="{{2.submission_link}}" class="cta-button">Complete Your Review</a>
       </center>
-      <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
       <div class="agent-signature">
         <div class="agent-info">
           <img src="{{2.agent_company_logo_url}}" alt="Company Logo" class="agent-logo" />
           <div>
             <p style="margin: 0; font-weight: bold;">{{2.agent_first_name}} {{2.agent_last_name}}</p>
             <p style="margin: 5px 0 0 0; color: #666;">Insurance Agent</p>
-            <p style="margin: 5px 0 0 0;"><a href="mailto:{{2.agent_email}}" style="color: #0066cc;">{{2.agent_email}}</a></p>
+            <p style="margin: 5px 0 0 0;"><a href="mailto:{{2.agent_email}}" style="color: #003B72;">{{2.agent_email}}</a></p>
           </div>
         </div>
       </div>
     </div>
     <div class="footer">
-      <p>This is an automated reminder. Please do not reply to this email.</p>
+      <p><strong>PRL Insurance</strong></p>
+      <p>This is an automated message. Please do not reply to this email.</p>
     </div>
   </div>
 </body>
@@ -284,8 +286,8 @@ Deno.serve(async (req) => {
                     to: '{{2.client_email}}',
                     cc: '{{2.agent_email}}',
                     bcc: 'Shustinedominiquie@gmail.com',
-                    from: '',
-                    subject: 'URGENT: Your {{2.company_name}} Policy Has Expired - Action Required',
+                    from: 'PRL Insurance <policyreminder@prlinsurance.com>',
+                    subject: 'Reminder: Complete Your Umbrella Policy Review',
                     contentType: 'HTML',
                     body: `<!DOCTYPE html>
 <html>
@@ -293,12 +295,13 @@ Deno.serve(async (req) => {
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: #dc3545; color: white; padding: 20px; text-align: center; }
-    .urgent-banner { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
+    .header { background: #003B72; color: white; padding: 30px 20px; text-align: center; }
+    .header img { max-width: 200px; height: auto; margin-bottom: 15px; }
+    .header h1 { margin: 0; font-size: 24px; }
     .content { padding: 30px; background: #f9f9f9; }
-    .policy-card { background: white; border-left: 4px solid #dc3545; padding: 20px; margin: 20px 0; }
-    .cta-button { display: inline-block; padding: 15px 30px; background: #dc3545; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-    .agent-signature { background: white; padding: 20px; margin: 20px 0; border-top: 2px solid #dc3545; }
+    .policy-card { background: white; border-left: 4px solid #003B72; padding: 20px; margin: 20px 0; }
+    .cta-button { display: inline-block; padding: 15px 30px; background: #003B72; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .agent-signature { background: white; padding: 20px; margin: 20px 0; border-top: 2px solid #003B72; }
     .agent-info { display: flex; align-items: center; gap: 15px; }
     .agent-logo { width: 60px; height: 60px; object-fit: contain; }
     .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
@@ -307,39 +310,36 @@ Deno.serve(async (req) => {
 <body>
   <div class="container">
     <div class="header">
-      <h1>⚠️ URGENT: Policy Expired</h1>
+      <img src="https://mkfaphusizsjgcpkepld.supabase.co/storage/v1/object/public/email-assets/prl-hero-logo.png" alt="PRL Insurance Logo" />
+      <h1>Umbrella Policy Review Reminder</h1>
     </div>
     <div class="content">
-      <div class="urgent-banner">
-        <strong>⚠️ ACTION REQUIRED:</strong> Your policy has expired and needs immediate attention.
-      </div>
       <p>Hi {{2.client_first_name}},</p>
-      <p>Our records show that your insurance policy has expired and we have not yet received your renewal submission.</p>
+      <p>You were recently sent this umbrella review questionnaire to complete for the upcoming renewal of your personal umbrella policy. This is a new format that we are using. Please see the link below for your umbrella renewal. We want to make sure we have the most up to date information. If you prefer, please call our office to talk to an agent.</p>
       <div class="policy-card">
         <h3>Policy Details</h3>
         <p><strong>Policy Number:</strong> {{2.policy_number}}</p>
         <p><strong>Company:</strong> {{2.company_name}}</p>
-        <p><strong>Expiration Date:</strong> {{2.expiration_date}} (EXPIRED)</p>
+        <p><strong>Expiration Date:</strong> {{2.expiration_date}}</p>
         <p><strong>Customer Number:</strong> {{2.customer_number}}</p>
       </div>
-      <p><strong>You may currently be without coverage.</strong> Please submit your renewal form immediately to avoid any gaps in protection.</p>
       <center>
-        <a href="{{2.submission_link}}" class="cta-button">SUBMIT NOW</a>
+        <a href="{{2.submission_link}}" class="cta-button">Complete Your Review</a>
       </center>
-      <p>If you have already submitted your renewal or have questions, please contact your agent immediately.</p>
       <div class="agent-signature">
         <div class="agent-info">
           <img src="{{2.agent_company_logo_url}}" alt="Company Logo" class="agent-logo" />
           <div>
             <p style="margin: 0; font-weight: bold;">{{2.agent_first_name}} {{2.agent_last_name}}</p>
             <p style="margin: 5px 0 0 0; color: #666;">Insurance Agent</p>
-            <p style="margin: 5px 0 0 0;"><a href="mailto:{{2.agent_email}}" style="color: #dc3545;">{{2.agent_email}}</a></p>
+            <p style="margin: 5px 0 0 0;"><a href="mailto:{{2.agent_email}}" style="color: #003B72;">{{2.agent_email}}</a></p>
           </div>
         </div>
       </div>
     </div>
     <div class="footer">
-      <p>This is an automated reminder. Please do not reply to this email.</p>
+      <p><strong>PRL Insurance</strong></p>
+      <p>This is an automated message. Please do not reply to this email.</p>
     </div>
   </div>
 </body>
