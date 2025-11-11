@@ -7,6 +7,7 @@ import { EmailAutomationPanel } from "@/components/EmailAutomationPanel";
 import { AgentManagement } from "@/components/AgentManagement";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { StorageUploader } from "@/components/StorageUploader";
+import { SetupGuide } from "@/components/SetupGuide";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,6 +33,7 @@ interface Policy {
 const Index = () => {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
+  const [logoUploaded, setLogoUploaded] = useState(false);
   const { toast } = useToast();
 
   const fetchPolicies = async () => {
@@ -55,8 +57,24 @@ const Index = () => {
     }
   };
 
+  const checkLogoStatus = async () => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("email-assets")
+        .list();
+      
+      if (error) throw error;
+      
+      const hasLogo = data?.some((file) => file.name === "prl-hero-logo.png");
+      setLogoUploaded(hasLogo || false);
+    } catch (error) {
+      console.error("Error checking logo:", error);
+    }
+  };
+
   useEffect(() => {
     fetchPolicies();
+    checkLogoStatus();
   }, []);
 
   const calculateStats = () => {
@@ -118,6 +136,7 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-8">
+            <SetupGuide logoUploaded={logoUploaded} />
             <PolicySummaryCards
               upcomingCount={stats.upcoming}
               pendingCount={stats.pending}

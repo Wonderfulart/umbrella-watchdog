@@ -51,6 +51,7 @@ export const FileUploadZone = ({ onUploadComplete }: FileUploadZoneProps) => {
         });
         
         onUploadComplete();
+        window.location.reload(); // Refresh to update setup guide
       } catch (error: any) {
         console.error("Upload error:", error);
         toast({

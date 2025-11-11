@@ -61,6 +61,7 @@ export const StorageUploader = () => {
       });
 
       fetchFiles();
+      window.location.reload(); // Refresh to update setup guide
     } catch (error: any) {
       console.error("Delete error:", error);
       toast({
