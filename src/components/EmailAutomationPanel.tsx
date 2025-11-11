@@ -30,8 +30,8 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
 
       if (data.success) {
         toast({
-          title: "Setup Complete!",
-          description: `Make.com scenario configured successfully with ${data.outlookConnectionName}`,
+          title: "Webhook Configured ✓",
+          description: `Using ${data.outlookConnectionName}. Emails are ready to send.`,
         });
       } else {
         throw new Error(data.error || 'Setup failed');
@@ -92,7 +92,7 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
               Email Automation Control
             </CardTitle>
             <CardDescription>
-              Manage automated email reminders for policy renewals
+              Click "Configure" to verify webhook connection, then send emails
             </CardDescription>
           </div>
           <Button
@@ -107,7 +107,7 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
                 Setting up...
               </>
             ) : (
-              'Configure Make.com'
+              'Configure Webhook'
             )}
           </Button>
         </div>
