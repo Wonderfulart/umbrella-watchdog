@@ -57,6 +57,38 @@ serve(async (req) => {
       errors: [] as Array<{ row: number; error: string }>,
     };
 
+    // Helper function to convert Excel serial date to YYYY-MM-DD
+    const convertExcelDate = (value: any): string => {
+      // If it's already a string in date format, return it
+      if (typeof value === 'string' && value.includes('-')) {
+        return value.split('T')[0]; // Remove time if present
+      }
+      
+      // If it's a number (Excel serial date), convert it
+      if (typeof value === 'number') {
+        // Excel serial date: days since January 1, 1900
+        const excelEpoch = new Date(1900, 0, 1);
+        const daysOffset = value - 2; // Excel incorrectly treats 1900 as leap year
+        const date = new Date(excelEpoch.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+        
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      // Try to parse as date string
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      throw new Error(`Invalid date format: ${value}`);
+    };
+
     // Process each policy
     for (let i = 0; i < policies.length; i++) {
       const row = policies[i];
@@ -64,12 +96,12 @@ serve(async (req) => {
       try {
         // Map columns to database fields
         const policyData = {
-          customer_number: row[columnMapping.customer_number],
-          policy_number: row[columnMapping.policy_number],
+          customer_number: String(row[columnMapping.customer_number]),
+          policy_number: String(row[columnMapping.policy_number]),
           client_first_name: row[columnMapping.client_first_name],
           client_email: row[columnMapping.client_email],
           agent_email: row[columnMapping.agent_email],
-          expiration_date: row[columnMapping.expiration_date],
+          expiration_date: convertExcelDate(row[columnMapping.expiration_date]),
           company_name: row[columnMapping.company_name],
         };
 
