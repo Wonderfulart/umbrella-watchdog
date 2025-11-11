@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Send, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Mail, Send, CheckCircle2, AlertCircle, Loader2, FlaskConical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface EmailAutomationPanelProps {
   email1Count: number;
@@ -16,6 +18,7 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
   const [isSendingEmail1, setIsSendingEmail1] = useState(false);
   const [isSendingEmail2, setIsSendingEmail2] = useState(false);
   const [isSendingAll, setIsSendingAll] = useState(false);
+  const [testMode, setTestMode] = useState(false);
   const { toast } = useToast();
 
   const handleSetup = async () => {
@@ -53,14 +56,14 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('trigger-outlook-emails', {
-        body: { email_type: emailType },
+        body: { email_type: emailType, test_mode: testMode },
       });
 
       if (error) throw error;
 
       if (data.success) {
         toast({
-          title: "Emails Sent!",
+          title: testMode ? "🧪 Test Emails Sent!" : "Emails Sent!",
           description: data.message || `Successfully sent ${data.sent} emails`,
         });
         onRefresh();
@@ -110,6 +113,31 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
         </div>
       </CardHeader>
       <CardContent>
+        <div className="mb-6 space-y-3">
+          <div className="flex items-center gap-3">
+            <Switch
+              id="test-mode"
+              checked={testMode}
+              onCheckedChange={setTestMode}
+            />
+            <Label htmlFor="test-mode" className="flex items-center gap-2 cursor-pointer">
+              <FlaskConical className="h-4 w-4" />
+              <span className="font-medium">Test Mode</span>
+            </Label>
+          </div>
+          {testMode && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-amber-900 dark:text-amber-200">Test Mode Active</p>
+                <p className="text-amber-800 dark:text-amber-300 mt-1">
+                  Emails will be sent regardless of dates and sent status. Status flags will NOT be updated. Limited to 10 policies per type.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+        
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -118,9 +146,9 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
             </div>
             <Button
               onClick={() => handleSendEmails('email1')}
-              disabled={isSendingEmail1 || email1Count === 0}
+              disabled={isSendingEmail1 || (!testMode && email1Count === 0)}
               className="w-full"
-              variant="default"
+              variant={testMode ? "outline" : "default"}
             >
               {isSendingEmail1 ? (
                 <>
@@ -130,7 +158,7 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
               ) : (
                 <>
                   <Send className="mr-2 h-4 w-4" />
-                  Send Email 1 Reminders
+                  Send Email 1{testMode ? ' (Test)' : ' Reminders'}
                 </>
               )}
             </Button>
@@ -143,9 +171,9 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
             </div>
             <Button
               onClick={() => handleSendEmails('email2')}
-              disabled={isSendingEmail2 || email2Count === 0}
+              disabled={isSendingEmail2 || (!testMode && email2Count === 0)}
               className="w-full"
-              variant="destructive"
+              variant={testMode ? "outline" : "destructive"}
             >
               {isSendingEmail2 ? (
                 <>
@@ -155,7 +183,7 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
               ) : (
                 <>
                   <Send className="mr-2 h-4 w-4" />
-                  Send Email 2 Reminders
+                  Send Email 2{testMode ? ' (Test)' : ' Reminders'}
                 </>
               )}
             </Button>
@@ -168,9 +196,9 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
             </div>
             <Button
               onClick={() => handleSendEmails('all')}
-              disabled={isSendingAll || (email1Count === 0 && email2Count === 0)}
+              disabled={isSendingAll || (!testMode && email1Count === 0 && email2Count === 0)}
               className="w-full"
-              variant="secondary"
+              variant={testMode ? "outline" : "secondary"}
             >
               {isSendingAll ? (
                 <>
@@ -180,7 +208,7 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
               ) : (
                 <>
                   <Mail className="mr-2 h-4 w-4" />
-                  Send All Pending
+                  Send All{testMode ? ' (Test)' : ' Pending'}
                 </>
               )}
             </Button>

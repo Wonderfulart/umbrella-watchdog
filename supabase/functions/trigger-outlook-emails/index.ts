@@ -7,8 +7,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email_type } = await req.json();
+    const { email_type, test_mode = false } = await req.json();
     console.log('Triggering emails for type:', email_type);
+    console.log('Test mode:', test_mode);
+    
+    if (test_mode) {
+      console.log('⚠️ TEST MODE ACTIVE - Email status flags will NOT be updated');
+    }
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -29,7 +34,7 @@ Deno.serve(async (req) => {
     const { data: policiesData, error: policiesError } = await supabase.functions.invoke(
       'get-policies-for-email',
       {
-        body: { email_type },
+        body: { email_type, test_mode },
       }
     );
 
@@ -83,7 +88,10 @@ Deno.serve(async (req) => {
         sent: policies.length,
         failed: 0,
         total: policies.length,
-        message: `Successfully triggered ${policies.length} emails via Make.com`,
+        test_mode,
+        message: test_mode 
+          ? `✅ TEST MODE: Triggered ${policies.length} test emails via Make.com (status flags NOT updated)`
+          : `Successfully triggered ${policies.length} emails via Make.com`,
       }),
       {
         status: 200,

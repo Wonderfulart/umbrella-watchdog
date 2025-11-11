@@ -28,48 +28,89 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const { test_mode = false, email_type } = await req.json();
+    
     console.log('Fetching policies for email automation');
+    console.log('Test mode:', test_mode);
+    console.log('Email type:', email_type);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Calculate dates for filtering
-    const today = new Date();
-    const email1Date = new Date(today);
-    email1Date.setDate(email1Date.getDate() + 37);
-    
-    const email2Date = new Date(today);
-    email2Date.setDate(email2Date.getDate() - 7);
+    let email1Policies = [];
+    let email2Policies = [];
 
-    console.log('Today:', today.toISOString());
-    console.log('Email 1 target date (T+37):', email1Date.toISOString());
-    console.log('Email 2 cutoff date (T-7):', email2Date.toISOString());
+    if (test_mode) {
+      console.log('⚠️ TEST MODE ACTIVE - Bypassing date and sent status filters');
+      
+      // In test mode, fetch policies without date/sent status filters
+      // Limit to 10 policies per type to prevent accidents
+      if (!email_type || email_type === 'email1' || email_type === 'all') {
+        const { data, error } = await supabase
+          .from('policies')
+          .select('*')
+          .limit(10);
+        
+        if (error) {
+          console.error('Error fetching test email1 policies:', error);
+          throw error;
+        }
+        email1Policies = data || [];
+      }
 
-    // Fetch policies needing Email 1 (T-37 days)
-    const { data: email1Policies, error: email1Error } = await supabase
-      .from('policies')
-      .select('*')
-      .eq('email1_sent', false)
-      .eq('expiration_date', email1Date.toISOString().split('T')[0]);
+      if (!email_type || email_type === 'email2' || email_type === 'all') {
+        const { data, error } = await supabase
+          .from('policies')
+          .select('*')
+          .limit(10);
+        
+        if (error) {
+          console.error('Error fetching test email2 policies:', error);
+          throw error;
+        }
+        email2Policies = data || [];
+      }
+    } else {
+      // Normal mode: use date filtering
+      const today = new Date();
+      const email1Date = new Date(today);
+      email1Date.setDate(email1Date.getDate() + 37);
+      
+      const email2Date = new Date(today);
+      email2Date.setDate(email2Date.getDate() - 7);
 
-    if (email1Error) {
-      console.error('Error fetching email1 policies:', email1Error);
-      throw email1Error;
-    }
+      console.log('Today:', today.toISOString());
+      console.log('Email 1 target date (T+37):', email1Date.toISOString());
+      console.log('Email 2 cutoff date (T-7):', email2Date.toISOString());
 
-    // Fetch policies needing Email 2 (T+7 days after expiration, no submission)
-    const { data: email2Policies, error: email2Error } = await supabase
-      .from('policies')
-      .select('*')
-      .eq('email2_sent', false)
-      .eq('jotform_submitted', false)
-      .lte('expiration_date', email2Date.toISOString().split('T')[0]);
+      // Fetch policies needing Email 1 (T-37 days)
+      const { data: email1Data, error: email1Error } = await supabase
+        .from('policies')
+        .select('*')
+        .eq('email1_sent', false)
+        .eq('expiration_date', email1Date.toISOString().split('T')[0]);
 
-    if (email2Error) {
-      console.error('Error fetching email2 policies:', email2Error);
-      throw email2Error;
+      if (email1Error) {
+        console.error('Error fetching email1 policies:', email1Error);
+        throw email1Error;
+      }
+      email1Policies = email1Data || [];
+
+      // Fetch policies needing Email 2 (T+7 days after expiration, no submission)
+      const { data: email2Data, error: email2Error } = await supabase
+        .from('policies')
+        .select('*')
+        .eq('email2_sent', false)
+        .eq('jotform_submitted', false)
+        .lte('expiration_date', email2Date.toISOString().split('T')[0]);
+
+      if (email2Error) {
+        console.error('Error fetching email2 policies:', email2Error);
+        throw email2Error;
+      }
+      email2Policies = email2Data || [];
     }
 
     // Format policies for Make.com
@@ -115,6 +156,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         timestamp: new Date().toISOString(),
+        test_mode,
         policies: allPolicies,
         summary: {
           email1_count: policiesForEmail1.length,
