@@ -79,8 +79,9 @@ Deno.serve(async (req) => {
       throw new Error(`Make.com webhook failed: ${webhookResponse.statusText}`);
     }
 
-    const result = await webhookResponse.json();
-    console.log('Webhook response:', result);
+    // Make.com webhook returns "Accepted" as text, not JSON
+    const responseText = await webhookResponse.text();
+    console.log('Webhook response:', responseText);
 
     return new Response(
       JSON.stringify({
