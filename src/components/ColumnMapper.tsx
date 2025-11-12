@@ -10,7 +10,6 @@ const REQUIRED_FIELDS = [
   { key: "client_email", label: "Client Email *" },
   { key: "agent_email", label: "Agent Email *" },
   { key: "expiration_date", label: "Expiration Date *" },
-  { key: "company_name", label: "Company Name *" },
 ];
 
 interface ColumnMapperProps {
@@ -21,31 +20,22 @@ interface ColumnMapperProps {
   onBack: () => void;
 }
 
-export const ColumnMapper = ({
-  headers,
-  columnMapping,
-  onMappingChange,
-  onNext,
-  onBack,
-}: ColumnMapperProps) => {
+export const ColumnMapper = ({ headers, columnMapping, onMappingChange, onNext, onBack }: ColumnMapperProps) => {
   const autoDetectMapping = () => {
     const newMapping: Record<string, string> = {};
-    
+
     REQUIRED_FIELDS.forEach(({ key }) => {
       const possibleMatches = headers.filter((header) => {
         const normalizedHeader = header.toLowerCase().replace(/[^a-z0-9]/g, "");
         const normalizedKey = key.toLowerCase().replace(/_/g, "");
-        return (
-          normalizedHeader.includes(normalizedKey) ||
-          normalizedKey.includes(normalizedHeader)
-        );
+        return normalizedHeader.includes(normalizedKey) || normalizedKey.includes(normalizedHeader);
       });
-      
+
       if (possibleMatches.length > 0) {
         newMapping[key] = possibleMatches[0];
       }
     });
-    
+
     onMappingChange(newMapping);
   };
 
@@ -63,7 +53,7 @@ export const ColumnMapper = ({
           Auto-Detect
         </Button>
       </div>
-      
+
       <p className="text-sm text-muted-foreground">
         Map your spreadsheet columns to the required fields. Fields marked with * are required.
       </p>
@@ -72,10 +62,7 @@ export const ColumnMapper = ({
         {REQUIRED_FIELDS.map(({ key, label }) => (
           <div key={key} className="grid grid-cols-2 gap-4 items-center">
             <Label>{label}</Label>
-            <Select
-              value={columnMapping[key] || ""}
-              onValueChange={(value) => handleMappingChange(key, value)}
-            >
+            <Select value={columnMapping[key] || ""} onValueChange={(value) => handleMappingChange(key, value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select column" />
               </SelectTrigger>
