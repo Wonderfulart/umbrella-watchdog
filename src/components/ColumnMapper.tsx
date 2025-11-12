@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 const REQUIRED_FIELDS = [
   { key: "customer_number", label: "Customer Number *" },
   { key: "policy_number", label: "Policy Number *" },
-  { key: "client_first_name", label: "Client First Name *" },
+  { key: "insured_name", label: "Insured First Name *" },
   { key: "client_email", label: "Client Email *" },
   { key: "agent_email", label: "Agent Email *" },
   { key: "expiration_date", label: "Expiration Date *" },
