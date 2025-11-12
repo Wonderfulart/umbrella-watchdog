@@ -8,6 +8,7 @@ import { AgentManagement } from "@/components/AgentManagement";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { StorageUploader } from "@/components/StorageUploader";
 import { SetupGuide } from "@/components/SetupGuide";
+import { EmailActivityDashboard } from "@/components/EmailActivityDashboard";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,7 +25,9 @@ interface Policy {
   submission_link: string;
   jotform_submitted: boolean;
   email1_sent: boolean;
+  email1_sent_date: string | null;
   email2_sent: boolean;
+  email2_sent_date: string | null;
   agent_first_name?: string;
   agent_last_name?: string;
   agent_company_logo_url?: string;
@@ -151,11 +154,15 @@ const Index = () => {
             <Tabs defaultValue="policies" className="w-full">
               <TabsList>
                 <TabsTrigger value="policies">Policies</TabsTrigger>
+                <TabsTrigger value="email-activity">Email Activity</TabsTrigger>
                 <TabsTrigger value="agents">Agent Management</TabsTrigger>
                 <TabsTrigger value="storage">Storage Uploader</TabsTrigger>
               </TabsList>
               <TabsContent value="policies" className="mt-6">
                 <PolicyTable policies={policies} />
+              </TabsContent>
+              <TabsContent value="email-activity" className="mt-6">
+                <EmailActivityDashboard policies={policies} />
               </TabsContent>
               <TabsContent value="agents" className="mt-6">
                 <AgentManagement />
