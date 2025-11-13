@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Header } from "@/components/Header";
 import { PolicySummaryCards } from "@/components/PolicySummaryCards";
 import { PolicyTable } from "@/components/PolicyTable";
 import { AddPolicyDialog } from "@/components/AddPolicyDialog";
@@ -38,13 +40,22 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [logoUploaded, setLogoUploaded] = useState(false);
   const { toast } = useToast();
+  const { user, userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
 
   const fetchPolicies = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("policies")
         .select("*")
         .order("expiration_date", { ascending: true });
+
+      // Agents see only their own policies
+      if (!isAdmin && user?.email) {
+        query = query.eq("agent_email", user.email);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setPolicies(data || []);
@@ -76,9 +87,11 @@ const Index = () => {
   };
 
   useEffect(() => {
-    fetchPolicies();
-    checkLogoStatus();
-  }, []);
+    if (user) {
+      fetchPolicies();
+      checkLogoStatus();
+    }
+  }, [user, isAdmin]);
 
   const calculateStats = () => {
     const today = new Date();
@@ -116,16 +129,21 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Policy Renewal Dashboard</h1>
-            <p className="text-muted-foreground">Track umbrella insurance policy renewals</p>
+            <p className="text-muted-foreground">
+              {isAdmin ? 'Track umbrella insurance policy renewals' : 'Your assigned policies'}
+            </p>
           </div>
-          <div className="flex gap-2">
-            <BulkImportDialog onImportComplete={fetchPolicies} />
-            <AddPolicyDialog onPolicyAdded={fetchPolicies} />
-          </div>
+          {isAdmin && (
+            <div className="flex gap-2">
+              <BulkImportDialog onImportComplete={fetchPolicies} />
+              <AddPolicyDialog onPolicyAdded={fetchPolicies} />
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -139,24 +157,26 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            <SetupGuide logoUploaded={logoUploaded} />
+            {isAdmin && <SetupGuide logoUploaded={logoUploaded} />}
             <PolicySummaryCards
               upcomingCount={stats.upcoming}
               pendingCount={stats.pending}
               completedCount={stats.completed}
               overdueCount={stats.overdue}
             />
-            <EmailAutomationPanel 
-              email1Count={stats.email1Count}
-              email2Count={stats.email2Count}
-              onRefresh={fetchPolicies}
-            />
+            {isAdmin && (
+              <EmailAutomationPanel 
+                email1Count={stats.email1Count}
+                email2Count={stats.email2Count}
+                onRefresh={fetchPolicies}
+              />
+            )}
             <Tabs defaultValue="policies" className="w-full">
               <TabsList>
                 <TabsTrigger value="policies">Policies</TabsTrigger>
                 <TabsTrigger value="email-activity">Email Activity</TabsTrigger>
-                <TabsTrigger value="agents">Agent Management</TabsTrigger>
-                <TabsTrigger value="storage">Storage Uploader</TabsTrigger>
+                {isAdmin && <TabsTrigger value="agents">Agent Management</TabsTrigger>}
+                {isAdmin && <TabsTrigger value="storage">Storage Uploader</TabsTrigger>}
               </TabsList>
               <TabsContent value="policies" className="mt-6">
                 <PolicyTable policies={policies} />
@@ -164,12 +184,16 @@ const Index = () => {
               <TabsContent value="email-activity" className="mt-6">
                 <EmailActivityDashboard policies={policies} />
               </TabsContent>
-              <TabsContent value="agents" className="mt-6">
-                <AgentManagement />
-              </TabsContent>
-              <TabsContent value="storage" className="mt-6">
-                <StorageUploader />
-              </TabsContent>
+              {isAdmin && (
+                <TabsContent value="agents" className="mt-6">
+                  <AgentManagement />
+                </TabsContent>
+              )}
+              {isAdmin && (
+                <TabsContent value="storage" className="mt-6">
+                  <StorageUploader />
+                </TabsContent>
+              )}
             </Tabs>
           </div>
         )}
