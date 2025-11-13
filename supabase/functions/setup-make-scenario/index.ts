@@ -1,12 +1,11 @@
 import { corsHeaders } from '../_shared/cors.ts';
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.0';
 
 const MAKE_API_TOKEN = Deno.env.get('MAKE_API');
-const MAKE_TEAM_ID = '1471864';
+const MAKE_TEAM_ID = '262894';
 const MAKE_BASE_URL = 'https://us2.make.com/api/v2';
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const WEBHOOK_URL = 'https://hook.us2.make.com/9c7md7mxdsg264527b3gv78u3xvssvgc';
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,12 +13,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('Starting simplified Make.com setup...');
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Initialize Supabase client
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    if (!MAKE_API_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Missing required environment variables');
+    }
 
-    // Step 1: Verify Outlook connection exists in Make.com
+    console.log('Fetching Make.com connections...');
+    
     const connectionsResponse = await fetch(
       `${MAKE_BASE_URL}/connections?teamId=${MAKE_TEAM_ID}`,
       {
@@ -31,31 +38,27 @@ Deno.serve(async (req) => {
     );
 
     if (!connectionsResponse.ok) {
-      throw new Error(`Failed to fetch connections: ${connectionsResponse.statusText}`);
+      throw new Error(`Make.com API error: ${connectionsResponse.statusText}`);
     }
 
-    const connections = await connectionsResponse.json();
-    console.log('Checking for Outlook connection...');
+    const connectionsData = await connectionsResponse.json();
+    console.log('Connections response:', JSON.stringify(connectionsData, null, 2));
 
-    const microsoftConnections = connections.connections?.filter(
-      (conn: any) => 
-        conn.name?.toLowerCase().includes('outlook') || 
-        conn.name?.toLowerCase().includes('office') ||
-        conn.name?.toLowerCase().includes('microsoft') ||
-        conn.accountName?.toLowerCase().includes('outlook') ||
-        conn.accountName?.toLowerCase().includes('azure') ||
-        conn.accountLabel?.toLowerCase().includes('microsoft')
+    const outlookConnection = connectionsData.connections?.find(
+      (conn: any) => conn.accountName?.toLowerCase().includes('outlook') ||
+                     conn.accountLabel?.toLowerCase().includes('outlook')
     );
-
-    const outlookConnection = microsoftConnections?.find(
-      (conn: any) => conn.metadata?.email === 'policyreminder@prlinsurance.com'
-    ) || microsoftConnections?.[0];
 
     if (!outlookConnection) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'No Microsoft/Outlook connection found. Please connect your Outlook account in Make.com first.',
+          error: 'No Outlook connection found in Make.com. Please set up an Outlook connection first.',
+          available_connections: connectionsData.connections?.map((conn: any) => ({
+            id: conn.id,
+            name: conn.accountName || conn.accountLabel,
+            type: conn.type,
+          })) || [],
         }),
         {
           status: 400,
@@ -64,54 +67,40 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Found Outlook connection:', outlookConnection);
+    console.log('Found Outlook connection:', outlookConnection.id);
 
-    // Step 2: Save webhook URL and connection ID to database
-    const { data: config, error: configError } = await supabase
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const webhookUrl = Deno.env.get('MAKE_WEBHOOK_URL') || 'https://hook.us2.make.com/9c7md7mxdsg264527b3gv78u3xvssvgc';
+    
+    const { error: configError } = await supabase
       .from('automation_config')
-      .select('*')
-      .single();
+      .upsert({
+        webhook_url: webhookUrl,
+        make_connection_id: outlookConnection.id.toString(),
+      });
 
-    if (config) {
-      await supabase
-        .from('automation_config')
-        .update({
-          webhook_url: WEBHOOK_URL,
-          make_connection_id: outlookConnection.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', config.id);
-    } else {
-      await supabase
-        .from('automation_config')
-        .insert({
-          webhook_url: WEBHOOK_URL,
-          make_connection_id: outlookConnection.id,
-        });
+    if (configError) {
+      throw new Error(`Failed to update config: ${configError.message}`);
     }
-
-    console.log('Configuration saved successfully');
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Webhook configured. Ready to send emails.',
-        webhook_url: WEBHOOK_URL,
-        connection_id: outlookConnection.id,
-        connection_email: outlookConnection.metadata?.email,
-        outlookConnectionName: outlookConnection.metadata?.email || 'Microsoft Account',
+        webhook_url: webhookUrl,
+        outlook_connection_id: outlookConnection.id,
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
-  } catch (error: any) {
-    console.error('Error setting up Make.com:', error);
+  } catch (error) {
+    console.error('Error in setup-make-scenario:', error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       }),
       {
         status: 500,
