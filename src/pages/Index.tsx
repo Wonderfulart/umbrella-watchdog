@@ -7,7 +7,7 @@ import { EmailAutomationPanel } from "@/components/EmailAutomationPanel";
 import { AgentManagement } from "@/components/AgentManagement";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { StorageUploader } from "@/components/StorageUploader";
-import { UserInstructions } from "@/components/UserInstructions";
+import { SetupGuide } from "@/components/SetupGuide";
 import { EmailActivityDashboard } from "@/components/EmailActivityDashboard";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -139,7 +139,7 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            <UserInstructions />
+            <SetupGuide logoUploaded={logoUploaded} />
             <PolicySummaryCards
               upcomingCount={stats.upcoming}
               pendingCount={stats.pending}

@@ -1,185 +1,194 @@
-import { corsHeaders } from '../_shared/cors.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const PolicyRowSchema = z.object({
-  customer_number: z.string().min(1).max(50).trim(),
-  policy_number: z.string().min(1).max(100).trim(),
-  client_first_name: z.string().min(1).max(100).trim(),
-  client_email: z.string().email().max(255).trim(),
-  agent_email: z.string().email().max(255).trim(),
-  company_name: z.string().min(1).max(200).trim(),
-  expiration_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD format'),
-  company_logo_url: z.string().url().max(500).optional(),
-});
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
-const ImportRequestSchema = z.object({
-  policies: z.array(z.record(z.any())),
-  columnMapping: z.record(z.string()),
-});
-
-function convertExcelDate(value: any): string {
-  if (!value) return '';
-  
-  if (typeof value === 'string') {
-    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-    if (datePattern.test(value)) {
-      return value;
-    }
-    
-    const parsed = new Date(value);
-    if (!isNaN(parsed.getTime())) {
-      return parsed.toISOString().split('T')[0];
-    }
-  }
-  
-  if (typeof value === 'number') {
-    const excelEpoch = new Date(1899, 11, 30);
-    const date = new Date(excelEpoch.getTime() + value * 86400000);
-    return date.toISOString().split('T')[0];
-  }
-  
-  return '';
+interface PolicyImportRow {
+  [key: string]: any;
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+interface ImportRequest {
+  policies: PolicyImportRow[];
+  columnMapping: Record<string, string>;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const requestBody = await req.json();
-    const requestValidation = ImportRequestSchema.safeParse(requestBody);
-    
-    if (!requestValidation.success) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid request format', 
-          details: requestValidation.error.issues 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { policies, columnMapping } = requestValidation.data;
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: agents, error: agentsError } = await supabase
-      .from('agents')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at');
+    const { policies, columnMapping }: ImportRequest = await req.json();
 
-    if (agentsError || !agents || agents.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'No active agents available for assignment' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    console.log(`Starting bulk import of ${policies.length} policies`);
+
+    // Fetch active agents
+    const { data: agents, error: agentsError } = await supabase
+      .from("agents")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: true });
+
+    if (agentsError) throw agentsError;
+    if (!agents || agents.length === 0) {
+      throw new Error("No active agents found. Please add agents first.");
     }
 
-    const { data: config } = await supabase
-      .from('automation_config')
-      .select('id, last_assigned_agent_index')
+    // Get current round-robin index
+    const { data: config, error: configError } = await supabase
+      .from("automation_config")
+      .select("id, last_assigned_agent_index")
       .single();
 
-    let currentAgentIndex = config?.last_assigned_agent_index || 0;
-    
+    if (configError) throw configError;
+
+    let currentIndex = config?.last_assigned_agent_index || 0;
+
     const results = {
       imported: 0,
       skipped: 0,
-      errors: [] as string[],
+      errors: [] as Array<{ row: number; error: string }>,
     };
 
-    for (const row of policies) {
-      try {
-        const mappedRow: Record<string, any> = {};
-        for (const [field, column] of Object.entries(columnMapping)) {
-          mappedRow[field] = row[column];
-        }
-
-        const rawExpirationDate = mappedRow['expiration_date'];
-        const convertedDate = convertExcelDate(rawExpirationDate);
-        mappedRow['expiration_date'] = convertedDate;
-
-        const policyValidation = PolicyRowSchema.safeParse(mappedRow);
+    // Helper function to convert Excel serial date to YYYY-MM-DD
+    const convertExcelDate = (value: any): string => {
+      // If it's already a string in date format, return it
+      if (typeof value === 'string' && value.includes('-')) {
+        return value.split('T')[0]; // Remove time if present
+      }
+      
+      // If it's a number (Excel serial date), convert it
+      if (typeof value === 'number') {
+        // Excel serial date: days since January 1, 1900
+        const excelEpoch = new Date(1900, 0, 1);
+        const daysOffset = value - 2; // Excel incorrectly treats 1900 as leap year
+        const date = new Date(excelEpoch.getTime() + daysOffset * 24 * 60 * 60 * 1000);
         
-        if (!policyValidation.success) {
-          results.errors.push(`Invalid data: ${policyValidation.error.issues[0].message}`);
-          results.skipped++;
-          continue;
-        }
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      // Try to parse as date string
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      throw new Error(`Invalid date format: ${value}`);
+    };
 
-        const validPolicy = policyValidation.data;
+    // Process each policy
+    for (let i = 0; i < policies.length; i++) {
+      const row = policies[i];
 
-        const { data: existing } = await supabase
-          .from('policies')
-          .select('id')
-          .eq('policy_number', validPolicy.policy_number)
-          .maybeSingle();
-
-        if (existing) {
-          results.errors.push(`Policy ${validPolicy.policy_number} already exists`);
-          results.skipped++;
-          continue;
-        }
-
-        const assignedAgent = agents[currentAgentIndex];
-        currentAgentIndex = (currentAgentIndex + 1) % agents.length;
-
+      try {
+        // Map columns to database fields
         const policyData = {
-          ...validPolicy,
-          agent_first_name: assignedAgent.first_name,
-          agent_last_name: assignedAgent.last_name,
-          agent_email: assignedAgent.email,
-          agent_company_logo_url: assignedAgent.company_logo_url,
-          submission_link: `https://form.jotform.com/250206113971145?policyNumber=${validPolicy.policy_number}`,
+          customer_number: String(row[columnMapping.customer_number]),
+          policy_number: String(row[columnMapping.policy_number]),
+          client_first_name: row[columnMapping.client_first_name],
+          client_email: row[columnMapping.client_email],
+          agent_email: row[columnMapping.agent_email],
+          expiration_date: convertExcelDate(row[columnMapping.expiration_date]),
+          company_name: row[columnMapping.company_name],
         };
 
-        const { error: insertError } = await supabase
-          .from('policies')
-          .insert(policyData);
+        // Validate required fields
+        const requiredFields = [
+          "customer_number",
+          "policy_number",
+          "client_first_name",
+          "client_email",
+          "agent_email",
+          "expiration_date",
+          "company_name",
+        ];
 
-        if (insertError) {
-          results.errors.push(`Failed to import ${validPolicy.policy_number}: ${insertError.message}`);
-          results.skipped++;
-        } else {
-          results.imported++;
+        for (const field of requiredFields) {
+          if (!policyData[field as keyof typeof policyData]) {
+            throw new Error(`Missing required field: ${field}`);
+          }
         }
+
+        // Check for duplicates
+        const { data: existing } = await supabase
+          .from("policies")
+          .select("id")
+          .eq("policy_number", policyData.policy_number)
+          .single();
+
+        if (existing) {
+          console.log(`Skipping duplicate policy: ${policyData.policy_number}`);
+          results.skipped++;
+          continue;
+        }
+
+        // Assign agent in round-robin fashion
+        const assignedAgent = agents[currentIndex % agents.length];
+        currentIndex++;
+
+        // Auto-generate submission link
+        const baseUrl = "https://form.jotform.com/250873904844061";
+        const submissionLink = `${baseUrl}?policyNumber=${encodeURIComponent(policyData.policy_number)}&typeA=${encodeURIComponent(policyData.customer_number)}`;
+
+        // Insert policy with agent assignment
+        const { error: insertError } = await supabase.from("policies").insert([
+          {
+            ...policyData,
+            submission_link: submissionLink,
+            agent_first_name: assignedAgent.first_name,
+            agent_last_name: assignedAgent.last_name,
+            agent_company_logo_url: assignedAgent.company_logo_url,
+            jotform_submitted: false,
+            email1_sent: false,
+            email2_sent: false,
+          },
+        ]);
+
+        if (insertError) throw insertError;
+
+        console.log(
+          `Imported policy ${policyData.policy_number}, assigned to ${assignedAgent.first_name} ${assignedAgent.last_name}`
+        );
+        results.imported++;
       } catch (error: any) {
-        results.errors.push(`Unexpected error: ${error.message}`);
-        results.skipped++;
+        console.error(`Error processing row ${i + 1}:`, error);
+        results.errors.push({
+          row: i + 1,
+          error: error.message,
+        });
       }
     }
 
+    // Update round-robin index
     await supabase
-      .from('automation_config')
-      .update({ last_assigned_agent_index: currentAgentIndex })
-      .eq('id', config?.id || '');
+      .from("automation_config")
+      .update({ last_assigned_agent_index: currentIndex })
+      .eq("id", config.id);
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        ...results,
-        total: policies.length,
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.log(`Import complete: ${results.imported} imported, ${results.skipped} skipped, ${results.errors.length} errors`);
+
+    return new Response(JSON.stringify(results), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error: any) {
-    console.error('Error in bulk-import-policies:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error("Bulk import error:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
   }
 });

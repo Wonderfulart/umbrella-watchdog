@@ -2,3 +2,18 @@ project_id = "mkfaphusizsjgcpkepld"
 
 [functions.jotform-webhook]
 verify_jwt = false
+
+[functions.get-policies-for-email]
+verify_jwt = false
+
+[functions.update-email-status]
+verify_jwt = false
+
+[functions.setup-make-scenario]
+verify_jwt = false
+
+[functions.trigger-outlook-emails]
+verify_jwt = false
+
+[functions.bulk-import-policies]
+verify_jwt = false

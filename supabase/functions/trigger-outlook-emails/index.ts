@@ -1,11 +1,5 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
-
-const TriggerEmailSchema = z.object({
-  email_type: z.enum(['email1', 'email2']),
-  test_mode: z.boolean().optional().default(false),
-});
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -13,37 +7,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const payload = await req.json();
-    const validationResult = TriggerEmailSchema.safeParse(payload);
-    
-    if (!validationResult.success) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid input', 
-          details: validationResult.error.issues 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { email_type, test_mode } = validationResult.data;
+    const { email_type, test_mode = false } = await req.json();
+    console.log('Triggering emails for type:', email_type);
+    console.log('Test mode:', test_mode);
     
     if (test_mode) {
       console.log('⚠️ TEST MODE ACTIVE - Email status flags will NOT be updated');
     }
 
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get webhook URL from config
     const { data: config, error: configError } = await supabase
       .from('automation_config')
       .select('webhook_url')
@@ -53,6 +30,7 @@ Deno.serve(async (req) => {
       throw new Error('Webhook URL not configured');
     }
 
+    // Call get-policies-for-email function
     const { data: policiesData, error: policiesError } = await supabase.functions.invoke(
       'get-policies-for-email',
       {
@@ -76,10 +54,14 @@ Deno.serve(async (req) => {
           total: 0,
           message: 'No policies need emails at this time',
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
+    // Send to Make.com webhook
     const webhookResponse = await fetch(config.webhook_url, {
       method: 'POST',
       headers: {
@@ -97,6 +79,7 @@ Deno.serve(async (req) => {
       throw new Error(`Make.com webhook failed: ${webhookResponse.statusText}`);
     }
 
+    // Make.com webhook returns "Accepted" as text, not JSON
     const responseText = await webhookResponse.text();
     console.log('Webhook response:', responseText);
 
@@ -111,7 +94,10 @@ Deno.serve(async (req) => {
           ? `✅ TEST MODE: Triggered ${policies.length} test emails via Make.com (status flags NOT updated)`
           : `Successfully triggered ${policies.length} emails via Make.com`,
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     );
   } catch (error) {
     console.error('Error triggering emails:', error);
@@ -120,7 +106,10 @@ Deno.serve(async (req) => {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     );
   }
 });
