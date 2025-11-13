@@ -40,12 +40,19 @@ Since this is your first user, you need to manually assign the admin role:
 
 ## Creating Additional Admins (Future Enhancement)
 
-In Phase 2, we'll add a User Management UI where admins can:
-- View all users
-- Assign/revoke roles
-- Manage user access
+In Phase 2, we've added a User Management UI where admins can:
+- View all users with their current roles
+- Assign admin or agent roles to users
+- Revoke roles from users
+- See warnings when trying to remove the last admin
 
-For now, additional admins must be created manually following Step 2 above.
+To assign roles:
+1. Navigate to the "User Management" tab (admin only)
+2. Find the user you want to promote
+3. Click "Make Admin" or "Make Agent"
+4. Confirm the action in the dialog
+
+The system prevents you from removing the last admin role to avoid lockouts.
 
 ## Security Notes
 

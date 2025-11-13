@@ -86,6 +86,22 @@ Deno.serve(async (req) => {
 
     console.log(`Successfully updated ${email_type} status for policy ${policy_id}`);
 
+    // Log the email send to email_logs table
+    const policy = data[0];
+    const { error: logError } = await supabase
+      .from('email_logs')
+      .insert({
+        policy_id: policy_id,
+        email_type: email_type,
+        recipient_email: policy.client_email,
+        status: 'sent',
+      });
+
+    if (logError) {
+      console.error('Failed to log email send:', logError);
+      // Don't fail the request if logging fails
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

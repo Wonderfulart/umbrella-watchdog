@@ -11,6 +11,8 @@ import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { StorageUploader } from "@/components/StorageUploader";
 import { SetupGuide } from "@/components/SetupGuide";
 import { EmailActivityDashboard } from "@/components/EmailActivityDashboard";
+import { EmailLogsTable } from "@/components/EmailLogsTable";
+import { UserManagement } from "@/components/UserManagement";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -175,7 +177,9 @@ const Index = () => {
               <TabsList>
                 <TabsTrigger value="policies">Policies</TabsTrigger>
                 <TabsTrigger value="email-activity">Email Activity</TabsTrigger>
+                <TabsTrigger value="email-logs">Email Logs</TabsTrigger>
                 {isAdmin && <TabsTrigger value="agents">Agent Management</TabsTrigger>}
+                {isAdmin && <TabsTrigger value="users">User Management</TabsTrigger>}
                 {isAdmin && <TabsTrigger value="storage">Storage Uploader</TabsTrigger>}
               </TabsList>
               <TabsContent value="policies" className="mt-6">
@@ -184,9 +188,17 @@ const Index = () => {
               <TabsContent value="email-activity" className="mt-6">
                 <EmailActivityDashboard policies={policies} />
               </TabsContent>
+              <TabsContent value="email-logs" className="mt-6">
+                <EmailLogsTable />
+              </TabsContent>
               {isAdmin && (
                 <TabsContent value="agents" className="mt-6">
                   <AgentManagement />
+                </TabsContent>
+              )}
+              {isAdmin && (
+                <TabsContent value="users" className="mt-6">
+                  <UserManagement />
                 </TabsContent>
               )}
               {isAdmin && (
