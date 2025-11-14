@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Header } from "@/components/Header";
 import { PolicySummaryCards } from "@/components/PolicySummaryCards";
 import { PolicyTable } from "@/components/PolicyTable";
 import { AddPolicyDialog } from "@/components/AddPolicyDialog";
@@ -11,10 +9,6 @@ import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { StorageUploader } from "@/components/StorageUploader";
 import { SetupGuide } from "@/components/SetupGuide";
 import { EmailActivityDashboard } from "@/components/EmailActivityDashboard";
-import { EmailLogsTable } from "@/components/EmailLogsTable";
-import { CronSetupInstructions } from "@/components/CronSetupInstructions";
-import { EmailTemplateEditor } from "@/components/EmailTemplateEditor";
-import { UserManagement } from "@/components/UserManagement";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,22 +38,13 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [logoUploaded, setLogoUploaded] = useState(false);
   const { toast } = useToast();
-  const { user, userRole } = useAuth();
-  const isAdmin = userRole === 'admin';
 
   const fetchPolicies = async () => {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from("policies")
         .select("*")
         .order("expiration_date", { ascending: true });
-
-      // Agents see only their own policies
-      if (!isAdmin && user?.email) {
-        query = query.eq("agent_email", user.email);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
       setPolicies(data || []);
@@ -91,11 +76,9 @@ const Index = () => {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchPolicies();
-      checkLogoStatus();
-    }
-  }, [user, isAdmin]);
+    fetchPolicies();
+    checkLogoStatus();
+  }, []);
 
   const calculateStats = () => {
     const today = new Date();
@@ -133,21 +116,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Policy Renewal Dashboard</h1>
-            <p className="text-muted-foreground">
-              {isAdmin ? 'Track umbrella insurance policy renewals' : 'Your assigned policies'}
-            </p>
+            <p className="text-muted-foreground">Track umbrella insurance policy renewals</p>
           </div>
-          {isAdmin && (
-            <div className="flex gap-2">
-              <BulkImportDialog onImportComplete={fetchPolicies} />
-              <AddPolicyDialog onPolicyAdded={fetchPolicies} />
-            </div>
-          )}
+          <div className="flex gap-2">
+            <BulkImportDialog onImportComplete={fetchPolicies} />
+            <AddPolicyDialog onPolicyAdded={fetchPolicies} />
+          </div>
         </div>
 
         {loading ? (
@@ -161,30 +139,24 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            {isAdmin && <SetupGuide logoUploaded={logoUploaded} />}
+            <SetupGuide logoUploaded={logoUploaded} />
             <PolicySummaryCards
               upcomingCount={stats.upcoming}
               pendingCount={stats.pending}
               completedCount={stats.completed}
               overdueCount={stats.overdue}
             />
-            {isAdmin && (
-              <EmailAutomationPanel 
-                email1Count={stats.email1Count}
-                email2Count={stats.email2Count}
-                onRefresh={fetchPolicies}
-              />
-            )}
+            <EmailAutomationPanel 
+              email1Count={stats.email1Count}
+              email2Count={stats.email2Count}
+              onRefresh={fetchPolicies}
+            />
             <Tabs defaultValue="policies" className="w-full">
               <TabsList>
                 <TabsTrigger value="policies">Policies</TabsTrigger>
                 <TabsTrigger value="email-activity">Email Activity</TabsTrigger>
-                <TabsTrigger value="email-logs">Email Logs</TabsTrigger>
-                {isAdmin && <TabsTrigger value="templates">Email Templates</TabsTrigger>}
-                {isAdmin && <TabsTrigger value="automation">Automation Setup</TabsTrigger>}
-                {isAdmin && <TabsTrigger value="agents">Agent Management</TabsTrigger>}
-                {isAdmin && <TabsTrigger value="users">User Management</TabsTrigger>}
-                {isAdmin && <TabsTrigger value="storage">Storage Uploader</TabsTrigger>}
+                <TabsTrigger value="agents">Agent Management</TabsTrigger>
+                <TabsTrigger value="storage">Storage Uploader</TabsTrigger>
               </TabsList>
               <TabsContent value="policies" className="mt-6">
                 <PolicyTable policies={policies} />
@@ -192,34 +164,12 @@ const Index = () => {
               <TabsContent value="email-activity" className="mt-6">
                 <EmailActivityDashboard policies={policies} />
               </TabsContent>
-              <TabsContent value="email-logs" className="mt-6">
-                <EmailLogsTable />
+              <TabsContent value="agents" className="mt-6">
+                <AgentManagement />
               </TabsContent>
-              {isAdmin && (
-                <TabsContent value="templates" className="mt-6">
-                  <EmailTemplateEditor />
-                </TabsContent>
-              )}
-              {isAdmin && (
-                <TabsContent value="automation" className="mt-6">
-                  <CronSetupInstructions />
-                </TabsContent>
-              )}
-              {isAdmin && (
-                <TabsContent value="agents" className="mt-6">
-                  <AgentManagement />
-                </TabsContent>
-              )}
-              {isAdmin && (
-                <TabsContent value="users" className="mt-6">
-                  <UserManagement />
-                </TabsContent>
-              )}
-              {isAdmin && (
-                <TabsContent value="storage" className="mt-6">
-                  <StorageUploader />
-                </TabsContent>
-              )}
+              <TabsContent value="storage" className="mt-6">
+                <StorageUploader />
+              </TabsContent>
             </Tabs>
           </div>
         )}
