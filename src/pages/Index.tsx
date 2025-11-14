@@ -12,6 +12,7 @@ import { StorageUploader } from "@/components/StorageUploader";
 import { SetupGuide } from "@/components/SetupGuide";
 import { EmailActivityDashboard } from "@/components/EmailActivityDashboard";
 import { EmailLogsTable } from "@/components/EmailLogsTable";
+import { CronSetupInstructions } from "@/components/CronSetupInstructions";
 import { UserManagement } from "@/components/UserManagement";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -178,6 +179,7 @@ const Index = () => {
                 <TabsTrigger value="policies">Policies</TabsTrigger>
                 <TabsTrigger value="email-activity">Email Activity</TabsTrigger>
                 <TabsTrigger value="email-logs">Email Logs</TabsTrigger>
+                {isAdmin && <TabsTrigger value="automation">Automation Setup</TabsTrigger>}
                 {isAdmin && <TabsTrigger value="agents">Agent Management</TabsTrigger>}
                 {isAdmin && <TabsTrigger value="users">User Management</TabsTrigger>}
                 {isAdmin && <TabsTrigger value="storage">Storage Uploader</TabsTrigger>}
@@ -191,6 +193,11 @@ const Index = () => {
               <TabsContent value="email-logs" className="mt-6">
                 <EmailLogsTable />
               </TabsContent>
+              {isAdmin && (
+                <TabsContent value="automation" className="mt-6">
+                  <CronSetupInstructions />
+                </TabsContent>
+              )}
               {isAdmin && (
                 <TabsContent value="agents" className="mt-6">
                   <AgentManagement />
