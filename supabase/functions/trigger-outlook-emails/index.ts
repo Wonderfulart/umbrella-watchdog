@@ -62,43 +62,96 @@ Deno.serve(async (req) => {
     }
 
     // Send to Make.com webhook
-    const webhookResponse = await fetch(config.webhook_url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        policies: policies.map((p: any) => ({
-          ...p,
-          email_type,
-        })),
-      }),
-    });
+    let webhookResponse;
+    let failedPolicies = 0;
+    
+    try {
+      webhookResponse = await fetch(config.webhook_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          policies: policies.map((p: any) => ({
+            ...p,
+            email_type,
+          })),
+        }),
+      });
 
-    if (!webhookResponse.ok) {
-      throw new Error(`Make.com webhook failed: ${webhookResponse.statusText}`);
-    }
-
-    // Make.com webhook returns "Accepted" as text, not JSON
-    const responseText = await webhookResponse.text();
-    console.log('Webhook response:', responseText);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        sent: policies.length,
-        failed: 0,
-        total: policies.length,
-        test_mode,
-        message: test_mode 
-          ? `✅ TEST MODE: Triggered ${policies.length} test emails via Make.com (status flags NOT updated)`
-          : `Successfully triggered ${policies.length} emails via Make.com`,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      if (!webhookResponse.ok) {
+        const errorText = await webhookResponse.text();
+        console.error('Make.com webhook failed:', webhookResponse.status, errorText);
+        
+        // Log failures for all policies in the batch
+        for (const policy of policies) {
+          try {
+            await supabase.from('email_logs').insert({
+              policy_id: policy.id,
+              email_type,
+              recipient_email: policy.client_email,
+              status: 'failed',
+              error_message: `Webhook returned ${webhookResponse.status}: ${errorText}`,
+            });
+          } catch (logError) {
+            console.error('Failed to log error for policy:', policy.id, logError);
+          }
+        }
+        
+        throw new Error(`Make.com webhook failed: ${webhookResponse.statusText} - ${errorText}`);
       }
-    );
+
+      // Make.com webhook returns "Accepted" as text, not JSON
+      const responseText = await webhookResponse.text();
+      console.log('Webhook response:', responseText);
+      
+      // Try to parse make_execution_id if available
+      let makeExecutionId;
+      try {
+        const responseJson = JSON.parse(responseText);
+        makeExecutionId = responseJson?.execution_id || responseJson?.executionId;
+      } catch {
+        // Response is not JSON, that's ok
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          sent: policies.length,
+          failed: 0,
+          total: policies.length,
+          test_mode,
+          make_execution_id: makeExecutionId,
+          message: test_mode 
+            ? `✅ TEST MODE: Triggered ${policies.length} test emails via Make.com (status flags NOT updated)`
+            : `Successfully triggered ${policies.length} emails via Make.com`,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    } catch (networkError) {
+      console.error('Network error triggering emails:', networkError);
+      
+      // Log network failures for all policies in the batch
+      for (const policy of policies) {
+        try {
+          await supabase.from('email_logs').insert({
+            policy_id: policy.id,
+            email_type,
+            recipient_email: policy.client_email,
+            status: 'failed',
+            error_message: `Network error: ${networkError instanceof Error ? networkError.message : 'Unknown error'}`,
+          });
+          failedPolicies++;
+        } catch (logError) {
+          console.error('Failed to log error for policy:', policy.id, logError);
+        }
+      }
+      
+      throw networkError;
+    }
   } catch (error) {
     console.error('Error triggering emails:', error);
     return new Response(
