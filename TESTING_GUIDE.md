@@ -22,19 +22,24 @@ This guide covers testing the complete email automation system including logging
    - No changes to policy email status flags (test mode)
 
 ### Test 2: Successful Email Flow - Test Mode (5 min)
-**Purpose:** Verify test mode sends emails without updating database flags
+**Purpose:** Verify test mode sends emails with sample data without updating database flags
 
 **Steps:**
-1. Restore correct Make.com webhook URL
-2. Ensure **Test Mode** is enabled (toggle ON)
-3. Click **Send Email 1** for 2-3 policies
-4. Check **Email Activity Dashboard → Email Logs**
-5. Check **Policies Table** for those policies
-6. **Expected Result:**
+1. Ensure **Test Mode** is enabled (toggle ON)
+2. Click **Send Email 1**
+3. **Expected Result:** 
+   - System generates and uses 1 sample test policy (no real data used)
+   - Sample policy details:
+     - Policy Number: POL-TEST-001
+     - Customer: TEST-12345
+     - Client Name: Test Client
+     - Client Email: test@example.com
    - Email logs show `sent` status with green badge
-   - Recipient email, policy number, and timestamp display correctly
-   - `email1_sent` flag in policies table remains `false`
-   - `email1_sent_date` remains `null`
+   - Make.com receives the test policy data
+   - NO changes to any real policies in database
+   - NO email status flags updated
+4. Check **Email Activity Dashboard → Email Logs**
+5. **Verify:** Log shows the sample test data, not real policy data
 
 ### Test 3: Production Mode Email Sending (5 min)
 **Purpose:** Verify production mode sends emails AND updates database
