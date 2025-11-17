@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Send, CheckCircle2, AlertCircle, Loader2, FlaskConical } from "lucide-react";
+import { Mail, Send, CheckCircle2, AlertCircle, Loader2, FlaskConical, Clock, Play, Pause } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 interface EmailAutomationPanelProps {
   email1Count: number;
@@ -19,7 +20,26 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
   const [isSendingEmail2, setIsSendingEmail2] = useState(false);
   const [isSendingAll, setIsSendingAll] = useState(false);
   const [testMode, setTestMode] = useState(false);
+  const [automationEnabled, setAutomationEnabled] = useState(false);
+  const [isTogglingAutomation, setIsTogglingAutomation] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
   const { toast } = useToast();
+
+  useEffect(() => {
+    checkAutomationStatus();
+  }, []);
+
+  const checkAutomationStatus = async () => {
+    try {
+      const { data, error } = await supabase.rpc('check_cron_status');
+      if (error) throw error;
+      setAutomationEnabled(data || false);
+    } catch (error) {
+      console.error('Error checking automation status:', error);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
 
   const handleSetup = async () => {
     setIsSettingUp(true);
@@ -45,6 +65,36 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
       });
     } finally {
       setIsSettingUp(false);
+    }
+  };
+
+  const handleToggleAutomation = async () => {
+    setIsTogglingAutomation(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('setup-email-cron', {
+        body: { enabled: !automationEnabled, time: '09:00' },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setAutomationEnabled(!automationEnabled);
+        toast({
+          title: data.enabled ? "Automation Enabled ✓" : "Automation Disabled",
+          description: data.message,
+        });
+      } else {
+        throw new Error(data.error || 'Failed to configure automation');
+      }
+    } catch (error: any) {
+      console.error('Automation toggle error:', error);
+      toast({
+        title: "Configuration Failed",
+        description: error.message || 'Failed to update automation settings',
+        variant: "destructive",
+      });
+    } finally {
+      setIsTogglingAutomation(false);
     }
   };
 
@@ -113,6 +163,41 @@ export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: Em
         </div>
       </CardHeader>
       <CardContent>
+        <div className="mb-6 p-4 rounded-lg border bg-muted/50 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <h3 className="font-semibold">Scheduled Automation</h3>
+                <p className="text-sm text-muted-foreground">
+                  Run email reminders automatically every day at 9:00 AM
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={automationEnabled}
+              onCheckedChange={handleToggleAutomation}
+              disabled={isTogglingAutomation || checkingStatus}
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Badge variant={automationEnabled ? "default" : "secondary"} className="flex items-center gap-1">
+              {automationEnabled ? (
+                <>
+                  <Play className="h-3 w-3" />
+                  Active - Daily at 9:00 AM
+                </>
+              ) : (
+                <>
+                  <Pause className="h-3 w-3" />
+                  Inactive
+                </>
+              )}
+            </Badge>
+          </div>
+        </div>
+
         <div className="mb-6 space-y-3">
           <div className="flex items-center gap-3">
             <Switch

@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.bulk-import-policies]
 verify_jwt = false
+
+[functions.setup-email-cron]
+verify_jwt = false
