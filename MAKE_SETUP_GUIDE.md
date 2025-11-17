@@ -55,7 +55,7 @@
    - **Body**:
      ```json
      {
-       "policy_id": "{{2.id}}",
+       "policy_number": "{{2.policy_number}}",
        "email_type": "email1"
      }
      ```
@@ -76,7 +76,7 @@ Same as Route 1 but with:
    - **Body**:
      ```json
      {
-       "policy_id": "{{2.id}}",
+       "policy_number": "{{2.policy_number}}",
        "email_type": "email2"
      }
      ```
