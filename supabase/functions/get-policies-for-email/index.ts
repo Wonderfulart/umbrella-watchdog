@@ -43,34 +43,40 @@ Deno.serve(async (req) => {
     let email2Policies = [];
 
     if (test_mode) {
-      console.log('⚠️ TEST MODE ACTIVE - Bypassing date and sent status filters');
+      console.log('⚠️ TEST MODE ACTIVE - Using sample test data (1 policy only)');
       
-      // In test mode, fetch policies without date/sent status filters
-      // Limit to 10 policies per type to prevent accidents
-      if (!email_type || email_type === 'email1' || email_type === 'all') {
-        const { data, error } = await supabase
-          .from('policies')
-          .select('*')
-          .limit(10);
-        
-        if (error) {
-          console.error('Error fetching test email1 policies:', error);
-          throw error;
-        }
-        email1Policies = data || [];
+      // Create sample test policy with all required fields
+      const samplePolicy = {
+        id: 'test-policy-' + Date.now(),
+        customer_number: 'TEST-12345',
+        policy_number: 'POL-TEST-001',
+        client_first_name: 'Test Client',
+        company_name: 'Test Insurance Co.',
+        client_email: 'test@example.com',
+        agent_email: 'agent@test.com',
+        agent_first_name: 'Test',
+        agent_last_name: 'Agent',
+        agent_company_logo_url: 'https://via.placeholder.com/150',
+        expiration_date: new Date().toISOString().split('T')[0],
+        submission_link: 'https://form.jotform.com/test',
+        email1_sent: false,
+        email1_sent_date: null,
+        email2_sent: false,
+        email2_sent_date: null,
+        jotform_submitted: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Return only 1 sample policy based on email_type
+      if (!email_type || email_type === 'email1') {
+        email1Policies = [samplePolicy];
+        console.log('✅ Test mode: Using 1 sample policy for Email 1');
       }
 
-      if (!email_type || email_type === 'email2' || email_type === 'all') {
-        const { data, error } = await supabase
-          .from('policies')
-          .select('*')
-          .limit(10);
-        
-        if (error) {
-          console.error('Error fetching test email2 policies:', error);
-          throw error;
-        }
-        email2Policies = data || [];
+      if (!email_type || email_type === 'email2') {
+        email2Policies = [{ ...samplePolicy, id: 'test-policy-email2-' + Date.now() }];
+        console.log('✅ Test mode: Using 1 sample policy for Email 2');
       }
     } else {
       // Normal mode: use date filtering
@@ -122,12 +128,12 @@ Deno.serve(async (req) => {
       company_name: policy.company_name,
       client_email: policy.client_email,
       agent_email: policy.agent_email,
+      agent_first_name: policy.agent_first_name,
+      agent_last_name: policy.agent_last_name,
+      agent_company_logo_url: policy.agent_company_logo_url,
       expiration_date: policy.expiration_date,
       submission_link: policy.submission_link,
-      email_type: 'email1' as const,
-      agent_first_name: policy.agent_first_name || '',
-      agent_last_name: policy.agent_last_name || '',
-      agent_company_logo_url: policy.agent_company_logo_url || '',
+      email_type: 'email1',
     }));
 
     const policiesForEmail2: PolicyForEmail[] = (email2Policies || []).map(policy => ({
@@ -138,47 +144,50 @@ Deno.serve(async (req) => {
       company_name: policy.company_name,
       client_email: policy.client_email,
       agent_email: policy.agent_email,
+      agent_first_name: policy.agent_first_name,
+      agent_last_name: policy.agent_last_name,
+      agent_company_logo_url: policy.agent_company_logo_url,
       expiration_date: policy.expiration_date,
       submission_link: policy.submission_link,
-      email_type: 'email2' as const,
-      agent_first_name: policy.agent_first_name || '',
-      agent_last_name: policy.agent_last_name || '',
-      agent_company_logo_url: policy.agent_company_logo_url || '',
+      email_type: 'email2',
     }));
-
-    const allPolicies = [...policiesForEmail1, ...policiesForEmail2];
 
     console.log(`Found ${policiesForEmail1.length} policies for Email 1`);
     console.log(`Found ${policiesForEmail2.length} policies for Email 2`);
-    console.log(`Total policies to process: ${allPolicies.length}`);
+
+    // Combine and filter based on email_type request
+    let policies: PolicyForEmail[] = [];
+    if (!email_type || email_type === 'email1') {
+      policies = [...policies, ...policiesForEmail1];
+    }
+    if (!email_type || email_type === 'email2') {
+      policies = [...policies, ...policiesForEmail2];
+    }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        timestamp: new Date().toISOString(),
+      JSON.stringify({ 
+        policies,
         test_mode,
-        policies: allPolicies,
-        summary: {
-          email1_count: policiesForEmail1.length,
-          email2_count: policiesForEmail2.length,
-          total_count: allPolicies.length,
-        },
+        total_count: policies.length,
+        email1_count: policiesForEmail1.length,
+        email2_count: policiesForEmail2.length,
       }),
       {
-        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
       }
     );
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('Error in get-policies-for-email:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(
-      JSON.stringify({
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error',
+      JSON.stringify({ 
+        error: errorMessage,
+        policies: [],
       }),
       {
-        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
       }
     );
   }
