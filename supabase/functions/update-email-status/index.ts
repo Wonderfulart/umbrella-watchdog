@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 interface UpdateEmailStatusRequest {
-  policy_id: string;
+  policy_number: string;
   email_type: 'email1' | 'email2';
 }
 
@@ -22,11 +22,11 @@ Deno.serve(async (req) => {
     const payload: UpdateEmailStatusRequest = await req.json();
     console.log('Payload:', JSON.stringify(payload, null, 2));
 
-    const { policy_id, email_type } = payload;
+    const { policy_number, email_type } = payload;
 
-    if (!policy_id || !email_type) {
+    if (!policy_number || !email_type) {
       return new Response(
-        JSON.stringify({ error: 'policy_id and email_type are required' }),
+        JSON.stringify({ error: 'policy_number and email_type are required' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -54,12 +54,12 @@ Deno.serve(async (req) => {
       ? { email1_sent: true, email1_sent_date: new Date().toISOString() }
       : { email2_sent: true, email2_sent_date: new Date().toISOString() };
 
-    console.log(`Updating ${email_type} status for policy ${policy_id}`);
+    console.log(`Updating ${email_type} status for policy ${policy_number}`);
 
     const { data, error } = await supabase
       .from('policies')
       .update(updateData)
-      .eq('id', policy_id)
+      .eq('policy_number', policy_number)
       .select();
 
     if (error) {
@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
     }
 
     if (!data || data.length === 0) {
-      console.error(`Policy not found: ${policy_id}`);
+      console.error(`Policy not found: ${policy_number}`);
       return new Response(
         JSON.stringify({ error: 'Policy not found' }),
         {
@@ -84,14 +84,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Successfully updated ${email_type} status for policy ${policy_id}`);
+    console.log(`Successfully updated ${email_type} status for policy ${policy_number}`);
 
     // Log email to email_logs table
     try {
       const { error: logError } = await supabase
         .from('email_logs')
         .insert({
-          policy_id,
+          policy_id: data[0].id,
           email_type,
           recipient_email: data[0].client_email,
           status: 'sent',
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         message: `${email_type} status updated successfully`,
-        policy_id,
+        policy_number,
         updated_at: new Date().toISOString(),
       }),
       {
