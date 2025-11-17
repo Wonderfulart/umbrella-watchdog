@@ -35,6 +35,7 @@ interface Policy {
 
 const Index = () => {
   const [policies, setPolicies] = useState<Policy[]>([]);
+  const [emailLogs, setEmailLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [logoUploaded, setLogoUploaded] = useState(false);
   const { toast } = useToast();
@@ -60,6 +61,23 @@ const Index = () => {
     }
   };
 
+  const fetchEmailLogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("email_logs")
+        .select(`
+          *,
+          policy:policies(policy_number, client_first_name)
+        `)
+        .order("sent_at", { ascending: false });
+
+      if (error) throw error;
+      setEmailLogs(data || []);
+    } catch (error: any) {
+      console.error("Error fetching email logs:", error);
+    }
+  };
+
   const checkLogoStatus = async () => {
     try {
       const { data, error } = await supabase.storage
@@ -77,7 +95,28 @@ const Index = () => {
 
   useEffect(() => {
     fetchPolicies();
+    fetchEmailLogs();
     checkLogoStatus();
+
+    // Subscribe to email_logs changes for real-time updates
+    const emailLogsChannel = supabase
+      .channel('email-logs-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'email_logs',
+        },
+        () => {
+          fetchEmailLogs();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(emailLogsChannel);
+    };
   }, []);
 
   const calculateStats = () => {
@@ -139,7 +178,7 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            <SetupGuide logoUploaded={logoUploaded} />
+            <SetupGuide logoUploaded={logoUploaded} automationEnabled={false} />
             <PolicySummaryCards
               upcomingCount={stats.upcoming}
               pendingCount={stats.pending}
@@ -162,7 +201,7 @@ const Index = () => {
                 <PolicyTable policies={policies} />
               </TabsContent>
               <TabsContent value="email-activity" className="mt-6">
-                <EmailActivityDashboard policies={policies} />
+                <EmailActivityDashboard policies={policies} emailLogs={emailLogs} />
               </TabsContent>
               <TabsContent value="agents" className="mt-6">
                 <AgentManagement />

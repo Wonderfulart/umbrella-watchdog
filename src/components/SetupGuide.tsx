@@ -11,9 +11,10 @@ interface SetupStep {
 
 interface SetupGuideProps {
   logoUploaded: boolean;
+  automationEnabled: boolean;
 }
 
-export const SetupGuide = ({ logoUploaded }: SetupGuideProps) => {
+export const SetupGuide = ({ logoUploaded, automationEnabled }: SetupGuideProps) => {
   const steps: SetupStep[] = [
     {
       id: "upload",
@@ -22,9 +23,15 @@ export const SetupGuide = ({ logoUploaded }: SetupGuideProps) => {
       completed: logoUploaded,
     },
     {
+      id: "automation",
+      title: "Enable Scheduled Automation",
+      description: "Turn on daily automation in the Email Automation panel",
+      completed: automationEnabled,
+    },
+    {
       id: "test",
       title: "Test Email Automation",
-      description: "Use the Email Automation panel to send a test email",
+      description: "Use Test Mode to send a test email and verify it works",
       completed: false,
     },
   ];

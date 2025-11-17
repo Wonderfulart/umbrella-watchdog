@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmailActivityTable } from "./EmailActivityTable";
-import { Mail, CheckCircle, XCircle, MailCheck } from "lucide-react";
+import { EmailLogsTable } from "./EmailLogsTable";
+import { Mail, CheckCircle, XCircle, MailCheck, Activity, AlertCircle } from "lucide-react";
 
 interface Policy {
   id: string;
@@ -18,11 +19,26 @@ interface Policy {
   email2_sent_date: string | null;
 }
 
-interface EmailActivityDashboardProps {
-  policies: Policy[];
+interface EmailLog {
+  id: string;
+  policy_id: string;
+  email_type: string;
+  recipient_email: string;
+  sent_at: string;
+  status: string;
+  error_message?: string;
+  policy?: {
+    policy_number: string;
+    client_first_name: string;
+  };
 }
 
-export const EmailActivityDashboard = ({ policies }: EmailActivityDashboardProps) => {
+interface EmailActivityDashboardProps {
+  policies: Policy[];
+  emailLogs: EmailLog[];
+}
+
+export const EmailActivityDashboard = ({ policies, emailLogs }: EmailActivityDashboardProps) => {
   const [filter, setFilter] = useState("all");
 
   const calculateStats = () => {
@@ -45,14 +61,19 @@ export const EmailActivityDashboard = ({ policies }: EmailActivityDashboardProps
     const noEmailsCount = policies.filter((p) => !p.email1_sent && !p.email2_sent).length;
     const bothEmailsCount = policies.filter((p) => p.email1_sent && p.email2_sent).length;
 
-    return { thisWeekCount, thisMonthCount, noEmailsCount, bothEmailsCount };
+    // Email logs stats
+    const totalEmailsSent = emailLogs.length;
+    const failedEmails = emailLogs.filter((log) => log.status === 'failed').length;
+    const successRate = totalEmailsSent > 0 ? ((totalEmailsSent - failedEmails) / totalEmailsSent * 100).toFixed(1) : '0';
+
+    return { thisWeekCount, thisMonthCount, noEmailsCount, bothEmailsCount, totalEmailsSent, failedEmails, successRate };
   };
 
   const stats = calculateStats();
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">This Week</CardTitle>
@@ -94,6 +115,39 @@ export const EmailActivityDashboard = ({ policies }: EmailActivityDashboardProps
           <CardContent>
             <div className="text-2xl font-bold">{stats.bothEmailsCount}</div>
             <p className="text-xs text-muted-foreground">Both emails sent</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalEmailsSent}</div>
+            <p className="text-xs text-muted-foreground">Total emails sent</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Failed</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.failedEmails}</div>
+            <p className="text-xs text-muted-foreground">Failed deliveries</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.successRate}%</div>
+            <p className="text-xs text-muted-foreground">Delivery success</p>
           </CardContent>
         </Card>
       </div>
