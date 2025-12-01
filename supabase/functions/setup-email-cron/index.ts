@@ -41,23 +41,16 @@ Deno.serve(async (req) => {
         await supabase.rpc('cron.unschedule', { job_name: 'daily-email-reminders' });
       }
 
-      // Schedule the cron job
+      // Schedule the cron job to call Rube AI
       const { error: cronError } = await supabase.rpc('cron.schedule', {
         job_name: 'daily-email-reminders',
         schedule: cronExpression,
         command: `
           SELECT
             net.http_post(
-              url:='${supabaseUrl}/functions/v1/trigger-outlook-emails',
+              url:='${supabaseUrl}/functions/v1/run-policy-reminder',
               headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}"}'::jsonb,
-              body:='{"email_type": "email1", "test_mode": false}'::jsonb
-            ) as request_id;
-          
-          SELECT
-            net.http_post(
-              url:='${supabaseUrl}/functions/v1/trigger-outlook-emails',
-              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}"}'::jsonb,
-              body:='{"email_type": "email2", "test_mode": false}'::jsonb
+              body:='{}'::jsonb
             ) as request_id;
         `,
       });

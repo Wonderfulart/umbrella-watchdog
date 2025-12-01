@@ -10,12 +10,10 @@ import { usePolicyReminder } from "@/hooks/usePolicyReminder";
 import { PolicyReminderStats } from "./PolicyReminderStats";
 
 interface EmailAutomationPanelProps {
-  email1Count: number;
-  email2Count: number;
   onRefresh: () => void;
 }
 
-export const EmailAutomationPanel = ({ email1Count, email2Count, onRefresh }: EmailAutomationPanelProps) => {
+export const EmailAutomationPanel = ({ onRefresh }: EmailAutomationPanelProps) => {
   const [automationEnabled, setAutomationEnabled] = useState(false);
   const [isTogglingAutomation, setIsTogglingAutomation] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
