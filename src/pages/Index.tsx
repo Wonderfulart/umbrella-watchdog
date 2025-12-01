@@ -139,16 +139,7 @@ const Index = () => {
       (p) => new Date(p.expiration_date) < today && !p.jotform_submitted
     ).length;
 
-    const email1Count = policies.filter((p) => {
-      const expDate = new Date(p.expiration_date);
-      return expDate >= today && expDate <= upcoming37Days && !p.jotform_submitted && !p.email1_sent;
-    }).length;
-
-    const email2Count = policies.filter(
-      (p) => new Date(p.expiration_date) < today && !p.jotform_submitted && !p.email2_sent
-    ).length;
-
-    return { upcoming, pending, completed, overdue, email1Count, email2Count };
+    return { upcoming, pending, completed, overdue };
   };
 
   const stats = calculateStats();
@@ -185,11 +176,7 @@ const Index = () => {
               completedCount={stats.completed}
               overdueCount={stats.overdue}
             />
-            <EmailAutomationPanel 
-              email1Count={stats.email1Count}
-              email2Count={stats.email2Count}
-              onRefresh={fetchPolicies}
-            />
+            <EmailAutomationPanel onRefresh={fetchPolicies} />
             <Tabs defaultValue="policies" className="w-full">
               <TabsList>
                 <TabsTrigger value="policies">Policies</TabsTrigger>
