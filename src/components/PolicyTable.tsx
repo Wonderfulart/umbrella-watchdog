@@ -10,7 +10,9 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Search } from "lucide-react";
+import { BulkActions } from "@/components/BulkActions";
 
 interface Policy {
   id: string;
@@ -32,10 +34,12 @@ interface Policy {
 
 interface PolicyTableProps {
   policies: Policy[];
+  onRefresh?: () => void;
 }
 
-export const PolicyTable = ({ policies }: PolicyTableProps) => {
+export const PolicyTable = ({ policies, onRefresh }: PolicyTableProps) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPolicies, setSelectedPolicies] = useState<string[]>([]);
 
   const getStatusBadge = (policy: Policy) => {
     const expirationDate = new Date(policy.expiration_date);
@@ -74,6 +78,27 @@ export const PolicyTable = ({ policies }: PolicyTableProps) => {
       policy.client_email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const toggleSelectAll = () => {
+    if (selectedPolicies.length === filteredPolicies.length) {
+      setSelectedPolicies([]);
+    } else {
+      setSelectedPolicies(filteredPolicies.map((p) => p.id));
+    }
+  };
+
+  const toggleSelectPolicy = (policyId: string) => {
+    setSelectedPolicies((prev) =>
+      prev.includes(policyId)
+        ? prev.filter((id) => id !== policyId)
+        : [...prev, policyId]
+    );
+  };
+
+  const handleActionComplete = () => {
+    setSelectedPolicies([]);
+    onRefresh?.();
+  };
+
   return (
     <div className="space-y-4">
       <div className="relative">
@@ -86,10 +111,22 @@ export const PolicyTable = ({ policies }: PolicyTableProps) => {
         />
       </div>
 
+      <BulkActions
+        selectedPolicies={selectedPolicies}
+        onActionComplete={handleActionComplete}
+        onClearSelection={() => setSelectedPolicies([])}
+      />
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={selectedPolicies.length === filteredPolicies.length && filteredPolicies.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </TableHead>
               <TableHead>Customer #</TableHead>
               <TableHead>Policy Number</TableHead>
               <TableHead>Client Name</TableHead>
@@ -104,13 +141,19 @@ export const PolicyTable = ({ policies }: PolicyTableProps) => {
           <TableBody>
             {filteredPolicies.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={10} className="text-center text-muted-foreground">
                   No policies found
                 </TableCell>
               </TableRow>
             ) : (
               filteredPolicies.map((policy) => (
                 <TableRow key={policy.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedPolicies.includes(policy.id)}
+                      onCheckedChange={() => toggleSelectPolicy(policy.id)}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{policy.customer_number}</TableCell>
                   <TableCell className="font-medium">{policy.policy_number}</TableCell>
                   <TableCell>{policy.client_first_name}</TableCell>
