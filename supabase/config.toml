@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.setup-email-cron]
 verify_jwt = false
+
+[functions.run-policy-reminder]
+verify_jwt = false
