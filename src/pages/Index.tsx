@@ -7,6 +7,7 @@ import { EmailAutomationPanel } from "@/components/EmailAutomationPanel";
 import { AgentManagement } from "@/components/AgentManagement";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { EmailActivityDashboard } from "@/components/EmailActivityDashboard";
+import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -160,11 +161,15 @@ const Index = () => {
             <Tabs defaultValue="policies" className="w-full">
               <TabsList>
                 <TabsTrigger value="policies">Policies</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
                 <TabsTrigger value="email-activity">Email Activity</TabsTrigger>
                 <TabsTrigger value="agents">Agent Management</TabsTrigger>
               </TabsList>
               <TabsContent value="policies" className="mt-6">
-                <PolicyTable policies={policies} />
+                <PolicyTable policies={policies} onRefresh={fetchPolicies} />
+              </TabsContent>
+              <TabsContent value="analytics" className="mt-6">
+                <AnalyticsDashboard policies={policies} emailLogs={emailLogs} />
               </TabsContent>
               <TabsContent value="email-activity" className="mt-6">
                 <EmailActivityDashboard policies={policies} emailLogs={emailLogs} />
