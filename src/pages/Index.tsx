@@ -6,8 +6,6 @@ import { AddPolicyDialog } from "@/components/AddPolicyDialog";
 import { EmailAutomationPanel } from "@/components/EmailAutomationPanel";
 import { AgentManagement } from "@/components/AgentManagement";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
-import { StorageUploader } from "@/components/StorageUploader";
-import { SetupGuide } from "@/components/SetupGuide";
 import { EmailActivityDashboard } from "@/components/EmailActivityDashboard";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,7 +35,6 @@ const Index = () => {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [logoUploaded, setLogoUploaded] = useState(false);
   const { toast } = useToast();
 
   const fetchPolicies = async () => {
@@ -78,25 +75,9 @@ const Index = () => {
     }
   };
 
-  const checkLogoStatus = async () => {
-    try {
-      const { data, error } = await supabase.storage
-        .from("email-assets")
-        .list();
-      
-      if (error) throw error;
-      
-      const hasLogo = data?.some((file) => file.name === "prl-hero-logo.png");
-      setLogoUploaded(hasLogo || false);
-    } catch (error) {
-      console.error("Error checking logo:", error);
-    }
-  };
-
   useEffect(() => {
     fetchPolicies();
     fetchEmailLogs();
-    checkLogoStatus();
 
     // Subscribe to email_logs changes for real-time updates
     const emailLogsChannel = supabase
@@ -169,7 +150,6 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            <SetupGuide logoUploaded={logoUploaded} automationEnabled={false} />
             <PolicySummaryCards
               upcomingCount={stats.upcoming}
               pendingCount={stats.pending}
@@ -182,7 +162,6 @@ const Index = () => {
                 <TabsTrigger value="policies">Policies</TabsTrigger>
                 <TabsTrigger value="email-activity">Email Activity</TabsTrigger>
                 <TabsTrigger value="agents">Agent Management</TabsTrigger>
-                <TabsTrigger value="storage">Storage Uploader</TabsTrigger>
               </TabsList>
               <TabsContent value="policies" className="mt-6">
                 <PolicyTable policies={policies} />
@@ -192,9 +171,6 @@ const Index = () => {
               </TabsContent>
               <TabsContent value="agents" className="mt-6">
                 <AgentManagement />
-              </TabsContent>
-              <TabsContent value="storage" className="mt-6">
-                <StorageUploader />
               </TabsContent>
             </Tabs>
           </div>
