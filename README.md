@@ -1,73 +1,178 @@
-# Welcome to your Lovable project
+# Policy Renewal Dashboard
 
-## Project info
+> A comprehensive policy renewal management system with automated email reminders powered by Rube AI.
 
-**URL**: https://lovable.dev/projects/45a0866a-3684-447f-b0d3-598098f7e598
+**Live Demo**: [View Dashboard](https://lovable.dev/projects/45a0866a-3684-447f-b0d3-598098f7e598)
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 🎯 Overview
 
-**Use Lovable**
+The Policy Renewal Dashboard helps insurance agencies automate policy renewal reminders, track email activity, and manage policies efficiently. Built with React, TypeScript, and Lovable Cloud (Supabase), it provides a modern, real-time dashboard for managing umbrella insurance policy renewals.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/45a0866a-3684-447f-b0d3-598098f7e598) and start prompting.
+### Key Features
 
-Changes made via Lovable will be committed automatically to this repo.
+✅ **Automated Email Reminders** - Rube AI-powered system sends renewal reminders automatically  
+✅ **Real-time Analytics** - Track email success rates, trends, and policy distribution  
+✅ **Email Template Editor** - Customize email content with live preview  
+✅ **Bulk Actions** - Import, export, delete multiple policies at once  
+✅ **Agent Management** - Track insurance agents and their policies  
+✅ **Notification Center** - Real-time alerts for important events  
+✅ **Scheduled Automation** - Daily cron job sends emails at configured time  
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🚀 Quick Start
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Prerequisites
 
-Follow these steps:
+- Node.js 18+ and npm
+- Lovable account (for cloud features)
+- Composio API key (for Rube AI)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+### Installation
+
+```bash
+# Clone the repository
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Initial Setup
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. **Configure Secrets** (via Lovable dashboard):
+   - `COMPOSIO_API_KEY` - Your Composio/Rube AI API key
 
-**Use GitHub Codespaces**
+2. **Seed Email Templates**:
+   ```sql
+   -- Run in Lovable → Cloud → Database → SQL Editor
+   -- See QUICK_START.md for full SQL
+   ```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+3. **Configure Rube AI**:
+   - Update `excel_file_id` in `supabase/functions/run-policy-reminder/index.ts`
+   - Add your JotForm link
 
-## What technologies are used for this project?
+4. **Deploy**:
+   - Click "Publish" in Lovable dashboard
+   - Verify deployment
+   - Enable scheduled automation
 
-This project is built with:
+📖 **Detailed Setup**: See [QUICK_START.md](QUICK_START.md) for step-by-step instructions
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
+## 📊 Features
 
-Simply open [Lovable](https://lovable.dev/projects/45a0866a-3684-447f-b0d3-598098f7e598) and click on Share -> Publish.
+### Policy Management
+- ✅ Create, edit, delete policies
+- ✅ Bulk import from CSV/Excel
+- ✅ Search and filter
+- ✅ Status tracking (overdue, pending, active, completed)
+- ✅ Real-time updates
 
-## Can I connect a custom domain to my Lovable project?
+### Email Automation
+- ✅ Automated renewal reminders (37 days before expiration)
+- ✅ Follow-up reminders (7 days after first email)
+- ✅ Scheduled daily automation via cron
+- ✅ Manual email execution
+- ✅ Email status tracking
 
-Yes, you can!
+### Analytics Dashboard
+- ✅ Email success rate charts
+- ✅ 7-day activity trends
+- ✅ Policy expiration distribution
+- ✅ Email type breakdown
+- ✅ Real-time statistics
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Email Templates
+- ✅ Rich HTML editor
+- ✅ Live preview with sample data
+- ✅ Template variables ({{client_first_name}}, etc.)
+- ✅ Separate templates for each reminder type
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### Notifications
+- ✅ Real-time notification center
+- ✅ Policy expiration alerts
+- ✅ Email send/fail notifications
+- ✅ Mark as read functionality
+
+---
+
+## 🏗️ Tech Stack
+
+- **Frontend**: React 18, TypeScript, Vite
+- **UI**: shadcn/ui, Tailwind CSS, Radix UI
+- **Backend**: Lovable Cloud (Supabase)
+- **Database**: PostgreSQL with Row Level Security
+- **Authentication**: Supabase Auth (needs implementation)
+- **Email**: Rube AI (Composio) with Outlook integration
+- **Charts**: Recharts
+- **Forms**: React Hook Form + Zod validation
+
+---
+
+## 📁 Project Structure
+
+```
+├── src/
+│   ├── components/          # React components
+│   │   ├── PolicyTable.tsx           # Policy list with bulk actions
+│   │   ├── EmailAutomationPanel.tsx  # Automation controls
+│   │   ├── AnalyticsDashboard.tsx    # Charts and analytics
+│   │   ├── EmailTemplateEditor.tsx   # Template management
+│   │   ├── NotificationCenter.tsx    # Real-time notifications
+│   │   └── ui/                       # shadcn/ui components
+│   ├── pages/
+│   │   └── Index.tsx                 # Main dashboard
+│   ├── hooks/                        # Custom React hooks
+│   ├── services/                     # API services
+│   └── integrations/
+│       └── supabase/                 # Supabase client & types
+├── supabase/
+│   ├── functions/                    # Edge functions
+│   │   ├── run-policy-reminder/      # Main Rube AI executor
+│   │   ├── setup-email-cron/         # Cron job manager
+│   │   └── jotform-webhook/          # JotForm integration
+│   └── migrations/                   # Database migrations
+└── public/                           # Static assets
+```
+
+---
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Managed automatically by Lovable Cloud:
+- `VITE_SUPABASE_URL` - Supabase project URL
+- `VITE_SUPABASE_PUBLISHABLE_KEY` - Supabase anon key
+
+### Secrets (Server-side)
+
+Configured in Lovable → Settings → Secrets:
+- `COMPOSIO_API_KEY` - Required for Rube AI
+- `SUPABASE_SERVICE_ROLE_KEY` - Auto-configured
+- `SUPABASE_DB_URL` - Auto-configured
+
+### Rube AI Configuration
+
+Update in `supabase/functions/run-policy-reminder/index.ts`:
+```typescript
+params: {
+  excel_file_id: 'YOUR_EXCEL_FILE_ID',
+  jotform_link: 'https://form.jotform.com/YOUR_FORM',
+  days_before_expiration: '37',
+  days_after_first_email: '7',
+}
+```
+
+---
+
+## 🚢 Deployment
