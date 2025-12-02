@@ -14,6 +14,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { runPolicyReminder } from "@/services/policyReminderService";
+import { useAuth } from "@/hooks/useAuth";
 
 interface BulkActionsProps {
   selectedPolicies: string[];
@@ -26,6 +27,7 @@ export const BulkActions = ({
   onActionComplete,
   onClearSelection,
 }: BulkActionsProps) => {
+  const { isAdmin } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -128,15 +130,17 @@ export const BulkActions = ({
           <Mail className="h-4 w-4" />
           Test Emails
         </Button>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => setShowDeleteDialog(true)}
-          className="gap-2"
-        >
-          <Trash2 className="h-4 w-4" />
-          Delete
-        </Button>
+        {isAdmin && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setShowDeleteDialog(true)}
+            className="gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </Button>
+        )}
         <Button variant="ghost" size="sm" onClick={onClearSelection}>
           Clear
         </Button>

@@ -11,8 +11,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { BulkActions } from "@/components/BulkActions";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface Policy {
   id: string;
@@ -40,6 +49,8 @@ interface PolicyTableProps {
 export const PolicyTable = ({ policies, onRefresh }: PolicyTableProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPolicies, setSelectedPolicies] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const getStatusBadge = (policy: Policy) => {
     const expirationDate = new Date(policy.expiration_date);
@@ -78,11 +89,21 @@ export const PolicyTable = ({ policies, onRefresh }: PolicyTableProps) => {
       policy.client_email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const totalPages = Math.ceil(filteredPolicies.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedPolicies = filteredPolicies.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedPolicies([]);
+  };
+
   const toggleSelectAll = () => {
-    if (selectedPolicies.length === filteredPolicies.length) {
+    if (selectedPolicies.length === paginatedPolicies.length && paginatedPolicies.length > 0) {
       setSelectedPolicies([]);
     } else {
-      setSelectedPolicies(filteredPolicies.map((p) => p.id));
+      setSelectedPolicies(paginatedPolicies.map((p) => p.id));
     }
   };
 
@@ -123,7 +144,7 @@ export const PolicyTable = ({ policies, onRefresh }: PolicyTableProps) => {
             <TableRow>
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedPolicies.length === filteredPolicies.length && filteredPolicies.length > 0}
+                  checked={selectedPolicies.length === paginatedPolicies.length && paginatedPolicies.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
               </TableHead>
@@ -139,14 +160,14 @@ export const PolicyTable = ({ policies, onRefresh }: PolicyTableProps) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredPolicies.length === 0 ? (
+            {paginatedPolicies.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} className="text-center text-muted-foreground">
                   No policies found
                 </TableCell>
               </TableRow>
             ) : (
-              filteredPolicies.map((policy) => (
+              paginatedPolicies.map((policy) => (
                 <TableRow key={policy.id}>
                   <TableCell>
                     <Checkbox
@@ -182,6 +203,36 @@ export const PolicyTable = ({ policies, onRefresh }: PolicyTableProps) => {
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+            {[...Array(totalPages)].map((_, i) => (
+              <PaginationItem key={i}>
+                <PaginationLink
+                  onClick={() => handlePageChange(i + 1)}
+                  isActive={currentPage === i + 1}
+                  className="cursor-pointer"
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   );
 };

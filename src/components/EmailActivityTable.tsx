@@ -4,6 +4,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Search, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface Policy {
   id: string;
@@ -26,6 +34,8 @@ interface EmailActivityTableProps {
 
 export const EmailActivityTable = ({ policies, filter }: EmailActivityTableProps) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const filteredPolicies = policies.filter((policy) => {
     const matchesSearch = 
@@ -50,6 +60,11 @@ export const EmailActivityTable = ({ policies, filter }: EmailActivityTableProps
         return true;
     }
   });
+
+  const totalPages = Math.ceil(filteredPolicies.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedPolicies = filteredPolicies.slice(startIndex, endIndex);
 
   const formatEmailStatus = (sent: boolean, date: string | null) => {
     if (!sent || !date) {
@@ -106,14 +121,14 @@ export const EmailActivityTable = ({ policies, filter }: EmailActivityTableProps
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredPolicies.length === 0 ? (
+            {paginatedPolicies.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No policies found matching your criteria
                 </TableCell>
               </TableRow>
             ) : (
-              filteredPolicies.map((policy) => (
+              paginatedPolicies.map((policy) => (
                 <TableRow key={policy.id}>
                   <TableCell className="font-medium">{policy.customer_number}</TableCell>
                   <TableCell>{policy.policy_number}</TableCell>
@@ -132,6 +147,36 @@ export const EmailActivityTable = ({ policies, filter }: EmailActivityTableProps
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+            {[...Array(totalPages)].map((_, i) => (
+              <PaginationItem key={i}>
+                <PaginationLink
+                  onClick={() => setCurrentPage(i + 1)}
+                  isActive={currentPage === i + 1}
+                  className="cursor-pointer"
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   );
 };

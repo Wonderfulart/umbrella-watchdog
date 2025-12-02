@@ -4,6 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { formatDistanceToNow } from "date-fns";
 import { Search } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface EmailLog {
   id: string;
@@ -25,6 +33,8 @@ interface EmailLogsTableProps {
 
 export const EmailLogsTable = ({ logs }: EmailLogsTableProps) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const filteredLogs = logs.filter((log) => {
     const search = searchTerm.toLowerCase();
@@ -34,6 +44,11 @@ export const EmailLogsTable = ({ logs }: EmailLogsTableProps) => {
       log.email_type.toLowerCase().includes(search)
     );
   });
+
+  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLogs = filteredLogs.slice(startIndex, endIndex);
 
   const getStatusBadge = (status: string) => {
     if (status === "sent") {
@@ -80,14 +95,14 @@ export const EmailLogsTable = ({ logs }: EmailLogsTableProps) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredLogs.length === 0 ? (
+            {paginatedLogs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground">
                   {searchTerm ? "No logs match your search" : "No email logs yet"}
                 </TableCell>
               </TableRow>
             ) : (
-              filteredLogs.map((log) => (
+              paginatedLogs.map((log) => (
                 <TableRow key={log.id}>
                   <TableCell>
                     {new Date(log.sent_at).toLocaleString()}
@@ -107,6 +122,36 @@ export const EmailLogsTable = ({ logs }: EmailLogsTableProps) => {
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+            {[...Array(totalPages)].map((_, i) => (
+              <PaginationItem key={i}>
+                <PaginationLink
+                  onClick={() => setCurrentPage(i + 1)}
+                  isActive={currentPage === i + 1}
+                  className="cursor-pointer"
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   );
 };
