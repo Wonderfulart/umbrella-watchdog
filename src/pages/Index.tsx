@@ -43,7 +43,7 @@ const Index = () => {
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -195,8 +195,8 @@ const Index = () => {
                 <TabsTrigger value="policies">Policies</TabsTrigger>
                 <TabsTrigger value="analytics">Analytics</TabsTrigger>
                 <TabsTrigger value="email-activity">Email Activity</TabsTrigger>
-                <TabsTrigger value="templates">Email Templates</TabsTrigger>
-                <TabsTrigger value="agents">Agent Management</TabsTrigger>
+                {isAdmin && <TabsTrigger value="templates">Email Templates</TabsTrigger>}
+                {isAdmin && <TabsTrigger value="agents">Agent Management</TabsTrigger>}
               </TabsList>
               <TabsContent value="policies" className="mt-6">
                 <PolicyTable policies={policies} onRefresh={fetchPolicies} />
@@ -207,12 +207,16 @@ const Index = () => {
               <TabsContent value="email-activity" className="mt-6">
                 <EmailActivityDashboard policies={policies} emailLogs={emailLogs} />
               </TabsContent>
-              <TabsContent value="templates" className="mt-6">
-                <EmailTemplateEditor />
-              </TabsContent>
-              <TabsContent value="agents" className="mt-6">
-                <AgentManagement />
-              </TabsContent>
+              {isAdmin && (
+                <TabsContent value="templates" className="mt-6">
+                  <EmailTemplateEditor />
+                </TabsContent>
+              )}
+              {isAdmin && (
+                <TabsContent value="agents" className="mt-6">
+                  <AgentManagement />
+                </TabsContent>
+              )}
             </Tabs>
           </div>
         )}
