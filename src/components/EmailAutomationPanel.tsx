@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Loader2, CheckCircle, Clock, Play, Pause } from "lucide-react";
+import { Mail, Loader2, CheckCircle, Clock, Play, Pause, FlaskConical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
@@ -18,7 +18,8 @@ export const EmailAutomationPanel = ({ onRefresh }: EmailAutomationPanelProps) =
   const [isTogglingAutomation, setIsTogglingAutomation] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [showResult, setShowResult] = useState(false);
-  const { execute, loading, result } = usePolicyReminder();
+  const [isTestResult, setIsTestResult] = useState(false);
+  const { execute, loading, testLoading, result } = usePolicyReminder();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -67,16 +68,24 @@ export const EmailAutomationPanel = ({ onRefresh }: EmailAutomationPanelProps) =
     }
   };
 
-  const handleRunReminders = async () => {
+  const handleRunReminders = async (testMode: boolean = false) => {
     try {
-      const data = await execute();
+      const data = await execute({ testMode });
       setShowResult(true);
+      setIsTestResult(testMode);
       
-      toast({
-        title: "Policy Reminders Sent!",
-        description: `Sent ${data.first_emails_sent} first emails and ${data.followup_emails_sent} follow-ups`,
-      });
-      onRefresh();
+      if (testMode) {
+        toast({
+          title: "Test Run Complete",
+          description: data.summary,
+        });
+      } else {
+        toast({
+          title: "Policy Reminders Sent!",
+          description: `Sent ${data.first_emails_sent} first emails and ${data.followup_emails_sent} follow-ups`,
+        });
+        onRefresh();
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -134,34 +143,75 @@ export const EmailAutomationPanel = ({ onRefresh }: EmailAutomationPanelProps) =
           </div>
         </div>
 
-        {/* Run Reminders Button */}
+        {/* Run Reminders Buttons */}
         <div className="space-y-4">
-          <Button
-            onClick={handleRunReminders}
-            disabled={loading}
-            size="lg"
-            className="w-full"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending Reminders...
-              </>
-            ) : (
-              <>
-                <Mail className="mr-2 h-4 w-4" />
-                Run Policy Reminders
-              </>
-            )}
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => handleRunReminders(true)}
+              disabled={loading || testLoading}
+              variant="outline"
+              size="lg"
+              className="flex-1"
+            >
+              {testLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                <>
+                  <FlaskConical className="mr-2 h-4 w-4" />
+                  Test Run
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => handleRunReminders(false)}
+              disabled={loading || testLoading}
+              size="lg"
+              className="flex-1"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Emails
+                </>
+              )}
+            </Button>
+          </div>
 
           {showResult && result && (
-            <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg">
+            <div className={`p-4 rounded-lg border ${
+              isTestResult 
+                ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900' 
+                : 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900'
+            }`}>
               <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500 mt-0.5" />
+                {isTestResult ? (
+                  <FlaskConical className="h-5 w-5 text-blue-600 dark:text-blue-500 mt-0.5" />
+                ) : (
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500 mt-0.5" />
+                )}
                 <div className="flex-1">
-                  <h4 className="font-semibold text-green-900 dark:text-green-100">Success!</h4>
-                  <p className="text-sm text-green-700 dark:text-green-300 mt-1">{result.summary}</p>
+                  <h4 className={`font-semibold ${
+                    isTestResult 
+                      ? 'text-blue-900 dark:text-blue-100' 
+                      : 'text-green-900 dark:text-green-100'
+                  }`}>
+                    {isTestResult ? 'Test Complete' : 'Success!'}
+                  </h4>
+                  <p className={`text-sm mt-1 ${
+                    isTestResult 
+                      ? 'text-blue-700 dark:text-blue-300' 
+                      : 'text-green-700 dark:text-green-300'
+                  }`}>
+                    {result.summary}
+                  </p>
                 </div>
               </div>
             </div>

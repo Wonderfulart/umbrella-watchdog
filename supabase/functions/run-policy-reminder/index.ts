@@ -9,7 +9,32 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('Starting Rube AI policy reminder execution...');
+    // Parse request body for testMode
+    const body = await req.json().catch(() => ({}));
+    const testMode = body?.testMode === true;
+
+    console.log(`Starting Rube AI policy reminder execution... (testMode: ${testMode})`);
+
+    // If test mode, return simulated results without calling Composio
+    if (testMode) {
+      console.log('TEST MODE: Returning simulated results without sending emails');
+      const simulatedResult = {
+        success: true,
+        testMode: true,
+        first_emails_sent: 2,
+        followup_emails_sent: 1,
+        policies_checked: 15,
+        summary: 'TEST MODE: Would have sent 2 first emails and 1 follow-up email to eligible policies',
+        errors: [],
+      };
+      return new Response(
+        JSON.stringify(simulatedResult),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
 
     if (!COMPOSIO_API_KEY) {
       throw new Error('COMPOSIO_API_KEY is not configured');
