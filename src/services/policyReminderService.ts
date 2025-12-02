@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface PolicyReminderResult {
   success: boolean;
+  testMode?: boolean;
   first_emails_sent: number;
   followup_emails_sent: number;
   policies_checked: number;
@@ -9,8 +10,14 @@ export interface PolicyReminderResult {
   errors: string[];
 }
 
-export const runPolicyReminder = async (): Promise<PolicyReminderResult> => {
-  const { data, error } = await supabase.functions.invoke('run-policy-reminder');
+export interface PolicyReminderOptions {
+  testMode?: boolean;
+}
+
+export const runPolicyReminder = async (options: PolicyReminderOptions = {}): Promise<PolicyReminderResult> => {
+  const { data, error } = await supabase.functions.invoke('run-policy-reminder', {
+    body: { testMode: options.testMode || false },
+  });
 
   if (error) {
     throw new Error(error.message || 'Failed to execute policy reminder');
