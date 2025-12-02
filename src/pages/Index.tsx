@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, BookOpen } from "lucide-react";
 
 interface Policy {
   id: string;
@@ -164,6 +164,10 @@ const Index = () => {
           </div>
           <div className="flex gap-2 items-center">
             <NotificationCenter />
+            <Button variant="outline" size="sm" onClick={() => navigate("/guide")}>
+              <BookOpen className="h-4 w-4 mr-2" />
+              User Guide
+            </Button>
             <BulkImportDialog onImportComplete={fetchPolicies} />
             <AddPolicyDialog onPolicyAdded={fetchPolicies} />
             <Button variant="outline" size="icon" onClick={handleLogout} title="Logout">
