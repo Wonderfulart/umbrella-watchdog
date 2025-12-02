@@ -275,6 +275,10 @@ export type Database = {
     Functions: {
       check_cron_status: { Args: never; Returns: boolean }
       disable_email_cron: { Args: never; Returns: undefined }
+      enable_email_cron: {
+        Args: { p_anon_key: string; p_function_url: string; p_schedule: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -30,29 +30,11 @@ Deno.serve(async (req) => {
       // Create cron expression for daily execution
       const cronExpression = `${minute} ${hour} * * *`;
 
-      // Check if cron job already exists
-      const { data: existingJobs } = await supabase
-        .from('cron.job')
-        .select('jobname')
-        .eq('jobname', 'daily-email-reminders');
-
-      if (existingJobs && existingJobs.length > 0) {
-        // Unschedule existing job first
-        await supabase.rpc('cron.unschedule', { job_name: 'daily-email-reminders' });
-      }
-
-      // Schedule the cron job to call Rube AI
-      const { error: cronError } = await supabase.rpc('cron.schedule', {
-        job_name: 'daily-email-reminders',
-        schedule: cronExpression,
-        command: `
-          SELECT
-            net.http_post(
-              url:='${supabaseUrl}/functions/v1/run-policy-reminder',
-              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}"}'::jsonb,
-              body:='{}'::jsonb
-            ) as request_id;
-        `,
+      // Schedule the cron job using our database function
+      const { error: cronError } = await supabase.rpc('enable_email_cron', {
+        p_schedule: cronExpression,
+        p_function_url: `${supabaseUrl}/functions/v1/run-policy-reminder`,
+        p_anon_key: Deno.env.get('SUPABASE_ANON_KEY'),
       });
 
       if (cronError) throw cronError;
