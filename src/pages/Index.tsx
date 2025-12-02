@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PolicySummaryCards } from "@/components/PolicySummaryCards";
 import { PolicyTable } from "@/components/PolicyTable";
@@ -11,8 +12,11 @@ import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { EmailTemplateEditor } from "@/components/EmailTemplateEditor";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 
 interface Policy {
   id: string;
@@ -39,6 +43,25 @@ const Index = () => {
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to log out",
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Success",
+      description: "Logged out successfully",
+    });
+    navigate("/auth");
+  };
 
   const fetchPolicies = async () => {
     try {
@@ -135,11 +158,17 @@ const Index = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Policy Renewal Dashboard</h1>
             <p className="text-muted-foreground">Track umbrella insurance policy renewals</p>
+            {user?.email && (
+              <p className="text-sm text-muted-foreground mt-1">Logged in as {user.email}</p>
+            )}
           </div>
           <div className="flex gap-2 items-center">
             <NotificationCenter />
             <BulkImportDialog onImportComplete={fetchPolicies} />
             <AddPolicyDialog onPolicyAdded={fetchPolicies} />
+            <Button variant="outline" size="icon" onClick={handleLogout} title="Logout">
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
