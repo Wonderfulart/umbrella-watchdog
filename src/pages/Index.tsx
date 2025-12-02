@@ -8,6 +8,8 @@ import { AgentManagement } from "@/components/AgentManagement";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { EmailActivityDashboard } from "@/components/EmailActivityDashboard";
 import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
+import { EmailTemplateEditor } from "@/components/EmailTemplateEditor";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -134,7 +136,8 @@ const Index = () => {
             <h1 className="text-3xl font-bold tracking-tight">Policy Renewal Dashboard</h1>
             <p className="text-muted-foreground">Track umbrella insurance policy renewals</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <NotificationCenter />
             <BulkImportDialog onImportComplete={fetchPolicies} />
             <AddPolicyDialog onPolicyAdded={fetchPolicies} />
           </div>
@@ -163,6 +166,7 @@ const Index = () => {
                 <TabsTrigger value="policies">Policies</TabsTrigger>
                 <TabsTrigger value="analytics">Analytics</TabsTrigger>
                 <TabsTrigger value="email-activity">Email Activity</TabsTrigger>
+                <TabsTrigger value="templates">Email Templates</TabsTrigger>
                 <TabsTrigger value="agents">Agent Management</TabsTrigger>
               </TabsList>
               <TabsContent value="policies" className="mt-6">
@@ -173,6 +177,9 @@ const Index = () => {
               </TabsContent>
               <TabsContent value="email-activity" className="mt-6">
                 <EmailActivityDashboard policies={policies} emailLogs={emailLogs} />
+              </TabsContent>
+              <TabsContent value="templates" className="mt-6">
+                <EmailTemplateEditor />
               </TabsContent>
               <TabsContent value="agents" className="mt-6">
                 <AgentManagement />
