@@ -461,6 +461,110 @@ export type Database = {
         }
         Relationships: []
       }
+      social_post_results: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          external_post_id: string | null
+          id: string
+          platform: string
+          post_id: string | null
+          published_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          external_post_id?: string | null
+          id?: string
+          platform: string
+          post_id?: string | null
+          published_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          external_post_id?: string | null
+          id?: string
+          platform?: string
+          post_id?: string | null
+          published_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_post_results_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_posts: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          media_urls: string[] | null
+          platforms: string[]
+          published_at: string | null
+          scheduled_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          media_urls?: string[] | null
+          platforms?: string[]
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          media_urls?: string[] | null
+          platforms?: string[]
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      social_settings: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          updated_at: string | null
+          zapier_webhook_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          updated_at?: string | null
+          zapier_webhook_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          updated_at?: string | null
+          zapier_webhook_url?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

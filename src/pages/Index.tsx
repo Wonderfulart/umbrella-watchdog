@@ -11,12 +11,14 @@ import { EmailActivityDashboard } from "@/components/EmailActivityDashboard";
 import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { EmailTemplateEditor } from "@/components/EmailTemplateEditor";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { FormDeploymentPanel } from "@/components/FormDeploymentPanel";
+import { SocialMediaPanel } from "@/components/SocialMediaPanel";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LogOut, BookOpen } from "lucide-react";
+import { LogOut, BookOpen, FileText, Share2 } from "lucide-react";
 
 interface Policy {
   id: string;
@@ -195,8 +197,16 @@ const Index = () => {
             />
             <EmailAutomationPanel onRefresh={fetchPolicies} />
             <Tabs defaultValue="policies" className="w-full">
-              <TabsList>
+              <TabsList className="flex-wrap h-auto gap-1 p-1">
                 <TabsTrigger value="policies">Policies</TabsTrigger>
+                <TabsTrigger value="forms" className="flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  Forms
+                </TabsTrigger>
+                <TabsTrigger value="social" className="flex items-center gap-1">
+                  <Share2 className="h-3 w-3" />
+                  Social Media
+                </TabsTrigger>
                 <TabsTrigger value="analytics">Analytics</TabsTrigger>
                 <TabsTrigger value="email-activity">Email Activity</TabsTrigger>
                 {isAdmin && <TabsTrigger value="templates">Email Templates</TabsTrigger>}
@@ -204,6 +214,12 @@ const Index = () => {
               </TabsList>
               <TabsContent value="policies" className="mt-6">
                 <PolicyTable policies={policies} onRefresh={fetchPolicies} />
+              </TabsContent>
+              <TabsContent value="forms" className="mt-6">
+                <FormDeploymentPanel policies={policies} />
+              </TabsContent>
+              <TabsContent value="social" className="mt-6">
+                <SocialMediaPanel />
               </TabsContent>
               <TabsContent value="analytics" className="mt-6">
                 <AnalyticsDashboard policies={policies} emailLogs={emailLogs} />

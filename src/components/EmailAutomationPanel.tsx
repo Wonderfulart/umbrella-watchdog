@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Loader2, CheckCircle, Clock, Play, Pause, FlaskConical } from "lucide-react";
+import { Mail, Loader2, CheckCircle, Clock, Play, Pause, FlaskConical, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { usePolicyReminder } from "@/hooks/usePolicyReminder";
 import { PolicyReminderStats } from "./PolicyReminderStats";
+import { EmailTemplateToggle } from "./EmailTemplateToggle";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface EmailAutomationPanelProps {
   onRefresh: () => void;
@@ -19,6 +21,8 @@ export const EmailAutomationPanel = ({ onRefresh }: EmailAutomationPanelProps) =
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [showResult, setShowResult] = useState(false);
   const [isTestResult, setIsTestResult] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState("email1");
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const { execute, loading, testLoading, result } = usePolicyReminder();
   const { toast } = useToast();
 
@@ -142,6 +146,32 @@ export const EmailAutomationPanel = ({ onRefresh }: EmailAutomationPanelProps) =
             </Badge>
           </div>
         </div>
+
+        {/* Template Selection Toggle */}
+        <Collapsible open={showTemplateSelector} onOpenChange={setShowTemplateSelector}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="w-full justify-between p-4 h-auto border rounded-lg bg-card hover:bg-accent/50">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                <span className="font-medium">Email Template</span>
+                <Badge variant="outline" className="ml-2">
+                  {selectedTemplate === "email1" ? "First Reminder" : "Follow-up"}
+                </Badge>
+              </div>
+              {showTemplateSelector ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-4">
+            <EmailTemplateToggle 
+              selectedTemplate={selectedTemplate}
+              onTemplateChange={setSelectedTemplate}
+            />
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Run Reminders Buttons */}
         <div className="space-y-4">
