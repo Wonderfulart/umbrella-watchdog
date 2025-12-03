@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Plus, ExternalLink, Eye, Loader2, ClipboardCopy } from "lucide-react";
+import { FileText, Plus, ExternalLink, Eye, Loader2, ClipboardCopy, Download } from "lucide-react";
 import { useFormTemplate } from "@/hooks/useFormTemplate";
 import { MasterFormBuilder } from "./forms/MasterFormBuilder";
 import { InsuranceApplicationForm } from "./forms/InsuranceApplicationForm";
+import { FormSubmissionsPanel } from "./FormSubmissionsPanel";
 import { toast } from "@/hooks/use-toast";
 
 interface FormDeploymentPanelProps {
@@ -49,8 +50,12 @@ export function FormDeploymentPanel({ policies = [] }: FormDeploymentPanelProps)
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="templates">Form Templates</TabsTrigger>
+          <TabsTrigger value="submissions" className="flex items-center gap-1">
+            <Download className="h-3 w-3" />
+            Submissions
+          </TabsTrigger>
           <TabsTrigger value="create">Create New Form</TabsTrigger>
         </TabsList>
 
@@ -216,6 +221,10 @@ export function FormDeploymentPanel({ policies = [] }: FormDeploymentPanelProps)
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="submissions">
+          <FormSubmissionsPanel />
         </TabsContent>
 
         <TabsContent value="create">

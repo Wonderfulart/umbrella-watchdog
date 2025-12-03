@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.run-policy-reminder]
 verify_jwt = false
+
+[functions.export-ezlynx]
+verify_jwt = false
