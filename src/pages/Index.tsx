@@ -14,11 +14,10 @@ import { NotificationCenter } from "@/components/NotificationCenter";
 import { FormDeploymentPanel } from "@/components/FormDeploymentPanel";
 import { SocialMediaPanel } from "@/components/SocialMediaPanel";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LogOut, BookOpen, FileText, Share2 } from "lucide-react";
+import { BookOpen, FileText, Share2 } from "lucide-react";
 
 interface Policy {
   id: string;
@@ -45,25 +44,10 @@ const Index = () => {
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { user, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    const { error } = await signOut();
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to log out",
-        variant: "destructive",
-      });
-      return;
-    }
-    toast({
-      title: "Success",
-      description: "Logged out successfully",
-    });
-    navigate("/auth");
-  };
+  
+  // Admin mode enabled by default (no auth)
+  const isAdmin = true;
 
   const fetchPolicies = async () => {
     try {
@@ -160,9 +144,6 @@ const Index = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Policy Renewal Dashboard</h1>
             <p className="text-muted-foreground">Track umbrella insurance policy renewals</p>
-            {user?.email && (
-              <p className="text-sm text-muted-foreground mt-1">Logged in as {user.email}</p>
-            )}
           </div>
           <div className="flex gap-2 items-center">
             <NotificationCenter />
@@ -172,9 +153,6 @@ const Index = () => {
             </Button>
             <BulkImportDialog onImportComplete={fetchPolicies} />
             <AddPolicyDialog onPolicyAdded={fetchPolicies} />
-            <Button variant="outline" size="icon" onClick={handleLogout} title="Logout">
-              <LogOut className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 
