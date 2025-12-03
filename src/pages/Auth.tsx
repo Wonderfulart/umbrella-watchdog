@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,28 +26,46 @@ const resetPasswordSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
 
+const newPasswordSchema = z.object({
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, signIn, signUp, resetPassword } = useAuth();
+  const { user, signIn, signUp, resetPassword, updatePassword } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showSetNewPassword, setShowSetNewPassword] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    // Listen for PASSWORD_RECOVERY event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setShowSetNewPassword(true);
+        setShowResetPassword(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    // Only redirect if user is logged in AND not in password recovery mode
+    if (user && !showSetNewPassword) {
       navigate("/");
     }
     
     // Check if user is coming from password reset link
-    if (searchParams.get("reset") === "true") {
-      setShowResetPassword(false);
-      toast({
-        title: "Password reset",
-        description: "Please check your email for the password reset link",
-      });
+    if (searchParams.get("reset") === "true" && !showSetNewPassword) {
+      // Don't show misleading toast - wait for PASSWORD_RECOVERY event
     }
-  }, [user, navigate, searchParams, toast]);
+  }, [user, navigate, searchParams, showSetNewPassword]);
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -172,6 +191,104 @@ const Auth = () => {
       setIsLoading(false);
     }
   };
+
+  const handleSetNewPassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      password: formData.get("new-password") as string,
+      confirmPassword: formData.get("confirm-password") as string,
+    };
+
+    try {
+      newPasswordSchema.parse(data);
+
+      const { error } = await updatePassword(data.password);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: "Password updated successfully! You can now sign in.",
+      });
+      setShowSetNewPassword(false);
+      // Sign out so user can log in with new password
+      await supabase.auth.signOut();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Show Set New Password form when user arrives from reset link
+  if (showSetNewPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">Set New Password</CardTitle>
+            <CardDescription>Enter your new password below</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSetNewPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  name="new-password"
+                  type="password"
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Input
+                  id="confirm-password"
+                  name="confirm-password"
+                  type="password"
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Updating..." : "Update Password"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setShowSetNewPassword(false);
+                  supabase.auth.signOut();
+                }}
+              >
+                Back to Sign In
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (showResetPassword) {
     return (
