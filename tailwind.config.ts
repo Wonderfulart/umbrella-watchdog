@@ -95,7 +95,7 @@ export default {
   		},
   		fontFamily: {
   			sans: [
-  				'Space Grotesk',
+  				'Work Sans',
   				'ui-sans-serif',
   				'system-ui',
   				'-apple-system',
@@ -108,7 +108,7 @@ export default {
   				'sans-serif'
   			],
   			mono: [
-  				'Space Mono',
+  				'Inconsolata',
   				'ui-monospace',
   				'SFMono-Regular',
   				'Menlo',
@@ -117,6 +117,15 @@ export default {
   				'Liberation Mono',
   				'Courier New',
   				'monospace'
+  			],
+  			serif: [
+  				'Lora',
+  				'ui-serif',
+  				'Georgia',
+  				'Cambria',
+  				'Times New Roman',
+  				'Times',
+  				'serif'
   			]
   		},
   		boxShadow: {
