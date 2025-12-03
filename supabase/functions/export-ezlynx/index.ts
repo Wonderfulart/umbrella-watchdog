@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { PDFDocument, StandardFonts, rgb } from 'https://esm.sh/pdf-lib@1.17.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,6 +40,19 @@ const formatDate = (date: string | null | undefined): string => {
   if (!date) return '';
   try {
     return new Date(date).toISOString().split('T')[0];
+  } catch {
+    return date;
+  }
+};
+
+const formatDisplayDate = (date: string | null | undefined): string => {
+  if (!date) return 'N/A';
+  try {
+    return new Date(date).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
   } catch {
     return date;
   }
@@ -284,7 +298,6 @@ const generateACORDXML = (submission: any, template: any, policy: any): string =
   
   let policyContent = '';
   
-  // Generate content based on line of business
   if (lineOfBusiness.includes('auto')) {
     policyContent += generateAutoPolicy(data, policy);
   }
@@ -300,16 +313,243 @@ const generateACORDXML = (submission: any, template: any, policy: any): string =
 </ACORD>`;
 };
 
+// PDF Generation Functions
+const generateACORDPDF = async (submission: any, template: any, policy: any): Promise<Uint8Array> => {
+  const data = submission.submission_data || {};
+  const lineOfBusiness = template?.line_of_business || ['auto'];
+  
+  const pdfDoc = await PDFDocument.create();
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  
+  let page = pdfDoc.addPage([612, 792]); // Letter size
+  const { width, height } = page.getSize();
+  let yPos = height - 50;
+  
+  const drawText = (text: string, x: number, y: number, font = helvetica, size = 10) => {
+    page.drawText(text, { x, y, size, font, color: rgb(0, 0, 0) });
+  };
+  
+  const drawSectionHeader = (title: string, y: number): number => {
+    page.drawRectangle({
+      x: 40,
+      y: y - 5,
+      width: width - 80,
+      height: 20,
+      color: rgb(0.9, 0.9, 0.9),
+    });
+    drawText(title, 45, y, helveticaBold, 11);
+    return y - 30;
+  };
+  
+  const drawLabelValue = (label: string, value: string | null | undefined, x: number, y: number): number => {
+    drawText(label + ':', x, y, helveticaBold, 9);
+    drawText(value || 'N/A', x + 120, y, helvetica, 9);
+    return y - 15;
+  };
+  
+  const checkPageBreak = (currentY: number, neededSpace: number = 100): number => {
+    if (currentY < neededSpace) {
+      page = pdfDoc.addPage([612, 792]);
+      return height - 50;
+    }
+    return currentY;
+  };
+
+  // Header
+  page.drawRectangle({
+    x: 40,
+    y: yPos - 10,
+    width: width - 80,
+    height: 35,
+    color: rgb(0.2, 0.3, 0.5),
+  });
+  drawText('ACORD INSURANCE APPLICATION', 45, yPos, helveticaBold, 14);
+  page.drawText('ACORD INSURANCE APPLICATION', { x: 45, y: yPos, size: 14, font: helveticaBold, color: rgb(1, 1, 1) });
+  yPos -= 20;
+  page.drawText(`Generated: ${new Date().toLocaleDateString()}`, { x: 45, y: yPos, size: 9, font: helvetica, color: rgb(1, 1, 1) });
+  page.drawText(`Policy #: ${policy?.policy_number || 'N/A'}`, { x: 350, y: yPos, size: 9, font: helvetica, color: rgb(1, 1, 1) });
+  yPos -= 40;
+
+  // Agency Information
+  yPos = drawSectionHeader('AGENCY INFORMATION', yPos);
+  yPos = drawLabelValue('Agency', data.agency_name || policy?.company_name, 50, yPos);
+  yPos = drawLabelValue('Agent Name', `${policy?.agent_first_name || ''} ${policy?.agent_last_name || ''}`.trim() || data.agent_name, 50, yPos);
+  yPos = drawLabelValue('Agent Email', policy?.agent_email || data.agent_email, 50, yPos);
+  yPos -= 15;
+
+  // Applicant Information
+  yPos = checkPageBreak(yPos);
+  yPos = drawSectionHeader('APPLICANT INFORMATION', yPos);
+  yPos = drawLabelValue('Full Name', `${data.applicant_first_name || ''} ${data.applicant_middle_name || ''} ${data.applicant_last_name || ''}`.trim(), 50, yPos);
+  yPos = drawLabelValue('Date of Birth', formatDisplayDate(data.date_of_birth), 50, yPos);
+  yPos = drawLabelValue('SSN (Last 4)', data.ssn ? `***-**-${data.ssn.slice(-4)}` : 'N/A', 50, yPos);
+  yPos = drawLabelValue('Gender', data.gender, 50, yPos);
+  yPos = drawLabelValue('Marital Status', data.marital_status, 50, yPos);
+  yPos = drawLabelValue('Occupation', data.occupation, 50, yPos);
+  yPos -= 10;
+  
+  // Contact Information
+  yPos = drawLabelValue('Primary Phone', data.primary_phone, 50, yPos);
+  yPos = drawLabelValue('Email', data.email, 50, yPos);
+  yPos -= 10;
+  
+  // Mailing Address
+  yPos = drawLabelValue('Mailing Address', data.mailing_address, 50, yPos);
+  yPos = drawLabelValue('City, State ZIP', `${data.mailing_city || ''}, ${data.mailing_state || ''} ${data.mailing_zip || ''}`, 50, yPos);
+  yPos -= 15;
+
+  // Vehicle Information (if Auto)
+  if (lineOfBusiness.includes('auto')) {
+    yPos = checkPageBreak(yPos);
+    yPos = drawSectionHeader('VEHICLE INFORMATION', yPos);
+    yPos = drawLabelValue('Year/Make/Model', `${data.vehicle_year || ''} ${data.vehicle_make || ''} ${data.vehicle_model || ''}`.trim(), 50, yPos);
+    yPos = drawLabelValue('VIN', data.vin, 50, yPos);
+    yPos = drawLabelValue('Body Type', data.body_type, 50, yPos);
+    yPos = drawLabelValue('Vehicle Use', data.vehicle_use, 50, yPos);
+    yPos = drawLabelValue('Annual Mileage', data.annual_mileage, 50, yPos);
+    yPos -= 10;
+    
+    // Driver Information
+    yPos = drawLabelValue('License Number', data.drivers_license_number, 50, yPos);
+    yPos = drawLabelValue('License State', data.license_state, 50, yPos);
+    yPos = drawLabelValue('Date Licensed', formatDisplayDate(data.date_licensed), 50, yPos);
+    yPos -= 15;
+
+    // Auto Coverages
+    yPos = checkPageBreak(yPos);
+    yPos = drawSectionHeader('AUTO COVERAGE INFORMATION', yPos);
+    yPos = drawLabelValue('Bodily Injury Limit', `$${data.bi_limit || '100,000'}`, 50, yPos);
+    yPos = drawLabelValue('Property Damage Limit', `$${data.pd_limit || '50,000'}`, 50, yPos);
+    yPos = drawLabelValue('Comprehensive Deductible', `$${data.comp_deductible || '500'}`, 50, yPos);
+    yPos = drawLabelValue('Collision Deductible', `$${data.coll_deductible || '500'}`, 50, yPos);
+    yPos = drawLabelValue('Uninsured Motorist', `$${data.um_limit || 'N/A'}`, 50, yPos);
+    yPos -= 15;
+  }
+
+  // Property Information (if Home/Dwelling)
+  if (lineOfBusiness.includes('home') || lineOfBusiness.includes('dwelling')) {
+    yPos = checkPageBreak(yPos);
+    yPos = drawSectionHeader('PROPERTY INFORMATION', yPos);
+    yPos = drawLabelValue('Property Address', data.property_address || data.mailing_address, 50, yPos);
+    yPos = drawLabelValue('City, State ZIP', `${data.property_city || data.mailing_city || ''}, ${data.property_state || data.mailing_state || ''} ${data.property_zip || data.mailing_zip || ''}`, 50, yPos);
+    yPos = drawLabelValue('Year Built', data.year_built, 50, yPos);
+    yPos = drawLabelValue('Construction Type', data.construction_type, 50, yPos);
+    yPos = drawLabelValue('Roof Material', data.roof_material, 50, yPos);
+    yPos = drawLabelValue('Square Footage', data.square_footage, 50, yPos);
+    yPos = drawLabelValue('# of Stories', data.num_stories, 50, yPos);
+    yPos = drawLabelValue('# of Bedrooms', data.num_rooms, 50, yPos);
+    yPos = drawLabelValue('# of Bathrooms', data.num_bathrooms, 50, yPos);
+    yPos -= 15;
+
+    // Home Coverages
+    yPos = checkPageBreak(yPos);
+    yPos = drawSectionHeader('HOME COVERAGE INFORMATION', yPos);
+    yPos = drawLabelValue('Dwelling Coverage', `$${data.dwelling_coverage || '250,000'}`, 50, yPos);
+    yPos = drawLabelValue('Other Structures', `$${data.other_structures_coverage || '25,000'}`, 50, yPos);
+    yPos = drawLabelValue('Personal Property', `$${data.personal_property_coverage || '125,000'}`, 50, yPos);
+    yPos = drawLabelValue('Loss of Use', `$${data.loss_of_use_coverage || '50,000'}`, 50, yPos);
+    yPos = drawLabelValue('Personal Liability', `$${data.personal_liability || '100,000'}`, 50, yPos);
+    yPos = drawLabelValue('Deductible', `$${data.base_deductible || '1,000'}`, 50, yPos);
+    yPos -= 15;
+  }
+
+  // Underwriting Questions
+  yPos = checkPageBreak(yPos, 150);
+  yPos = drawSectionHeader('UNDERWRITING QUESTIONS', yPos);
+  const underwritingQuestions = [
+    { q: 'Prior insurance cancelled/declined?', a: data.prior_cancelled },
+    { q: 'Any losses in past 5 years?', a: data.prior_losses },
+    { q: 'Any violations in past 3 years?', a: data.violations },
+    { q: 'Currently insured?', a: data.currently_insured },
+  ];
+  
+  for (const item of underwritingQuestions) {
+    yPos = checkPageBreak(yPos, 20);
+    yPos = drawLabelValue(item.q, item.a === true ? 'Yes' : item.a === false ? 'No' : 'N/A', 50, yPos);
+  }
+  yPos -= 20;
+
+  // Footer
+  yPos = checkPageBreak(yPos, 80);
+  page.drawLine({
+    start: { x: 40, y: yPos },
+    end: { x: width - 40, y: yPos },
+    thickness: 1,
+    color: rgb(0.7, 0.7, 0.7),
+  });
+  yPos -= 20;
+  drawText('Applicant Signature: _______________________________', 50, yPos, helvetica, 9);
+  drawText('Date: _______________', 400, yPos, helvetica, 9);
+  yPos -= 30;
+  drawText('Agent Signature: _______________________________', 50, yPos, helvetica, 9);
+  drawText('Date: _______________', 400, yPos, helvetica, 9);
+  yPos -= 30;
+  drawText(`Document ID: ${submission.id} | Generated by Policy Renewal Hub`, 50, yPos, helvetica, 8);
+
+  return await pdfDoc.save();
+};
+
+// Email PDF to Agent using Composio
+const emailPDFToAgent = async (pdfBytes: Uint8Array, submission: any, policy: any, agentEmail: string): Promise<{ success: boolean; message: string }> => {
+  const composioApiKey = Deno.env.get('COMPOSIO_API_KEY');
+  
+  if (!composioApiKey) {
+    console.log('[EZLynx Export] COMPOSIO_API_KEY not configured, skipping email');
+    return { success: false, message: 'Email service not configured. Please download the PDF instead.' };
+  }
+
+  try {
+    // Convert PDF to base64
+    const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
+    const clientName = `${submission.submission_data?.applicant_first_name || ''} ${submission.submission_data?.applicant_last_name || ''}`.trim() || 'Client';
+    const policyNumber = policy?.policy_number || 'N/A';
+    
+    // Call Composio API to send email
+    const response = await fetch('https://backend.composio.dev/api/v1/actions/execute', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': composioApiKey,
+      },
+      body: JSON.stringify({
+        actionName: 'outlook_send_email',
+        input: {
+          to: agentEmail,
+          subject: `ACORD Application - ${clientName} (Policy: ${policyNumber})`,
+          body: `Please find attached the ACORD Insurance Application for:\n\nClient: ${clientName}\nPolicy Number: ${policyNumber}\nGenerated: ${new Date().toLocaleDateString()}\n\nThis document was generated from Policy Renewal Hub and is ready for EZLynx import.\n\nBest regards,\nPolicy Renewal Hub`,
+          attachments: [{
+            name: `ACORD_Application_${submission.id.substring(0, 8)}.pdf`,
+            contentType: 'application/pdf',
+            content: pdfBase64,
+          }],
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[EZLynx Export] Email send failed:', errorText);
+      return { success: false, message: 'Failed to send email. Please download the PDF instead.' };
+    }
+
+    console.log('[EZLynx Export] Email sent successfully to:', agentEmail);
+    return { success: true, message: `PDF sent to ${agentEmail}` };
+  } catch (error) {
+    console.error('[EZLynx Export] Email error:', error);
+    return { success: false, message: 'Email service error. Please download the PDF instead.' };
+  }
+};
+
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { submissionId, format = 'xml' } = await req.json();
+    const { submissionId, format = 'xml', emailToAgent = false, agentEmail } = await req.json();
     
-    console.log(`[EZLynx Export] Starting export for submission: ${submissionId}, format: ${format}`);
+    console.log(`[EZLynx Export] Starting export for submission: ${submissionId}, format: ${format}, emailToAgent: ${emailToAgent}`);
     
     if (!submissionId) {
       return new Response(
@@ -318,12 +558,10 @@ serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch submission with related data
     const { data: submission, error: submissionError } = await supabase
       .from('form_submissions')
       .select(`
@@ -346,14 +584,36 @@ serve(async (req) => {
       );
     }
 
-    console.log('[EZLynx Export] Submission found, generating ACORD XML...');
+    console.log('[EZLynx Export] Submission found, generating export...');
 
-    // Generate ACORD XML
+    // Handle PDF format
+    if (format === 'pdf') {
+      const pdfBytes = await generateACORDPDF(submission, submission.template, submission.policy);
+      
+      // If email requested, send it
+      if (emailToAgent && agentEmail) {
+        const emailResult = await emailPDFToAgent(pdfBytes, submission, submission.policy, agentEmail);
+        return new Response(
+          JSON.stringify({ success: emailResult.success, message: emailResult.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Otherwise return PDF for download
+      console.log('[EZLynx Export] PDF generated successfully');
+      return new Response(pdfBytes.buffer as ArrayBuffer, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="ACORD_Application_${submissionId.substring(0, 8)}.pdf"`,
+        },
+      });
+    }
+
+    // Handle XML format
     const acordXml = generateACORDXML(submission, submission.template, submission.policy);
-
     console.log('[EZLynx Export] ACORD XML generated successfully');
 
-    // Return based on format
     if (format === 'xml') {
       return new Response(acordXml, {
         headers: {
@@ -364,7 +624,7 @@ serve(async (req) => {
       });
     }
 
-    // For JSON format (useful for debugging or further processing)
+    // JSON format for debugging
     return new Response(
       JSON.stringify({
         success: true,
