@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,12 @@ const newPasswordSchema = z.object({
   path: ["confirmPassword"],
 });
 
+// Check URL hash for recovery mode BEFORE component renders
+const checkForRecoveryMode = () => {
+  const hash = window.location.hash;
+  return hash.includes('type=recovery') || hash.includes('type=signup');
+};
+
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -41,31 +47,35 @@ const Auth = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
-  const [showSetNewPassword, setShowSetNewPassword] = useState(false);
+  const [showSetNewPassword, setShowSetNewPassword] = useState(checkForRecoveryMode);
+  const recoveryHandled = useRef(false);
 
   useEffect(() => {
     // Listen for PASSWORD_RECOVERY event
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth event:", event);
+      if (event === "PASSWORD_RECOVERY" && !recoveryHandled.current) {
+        recoveryHandled.current = true;
         setShowSetNewPassword(true);
         setShowResetPassword(false);
       }
     });
+
+    // Also check hash on mount in case event already fired
+    if (checkForRecoveryMode() && !recoveryHandled.current) {
+      recoveryHandled.current = true;
+      setShowSetNewPassword(true);
+    }
 
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     // Only redirect if user is logged in AND not in password recovery mode
-    if (user && !showSetNewPassword) {
+    if (user && !showSetNewPassword && !checkForRecoveryMode()) {
       navigate("/");
     }
-    
-    // Check if user is coming from password reset link
-    if (searchParams.get("reset") === "true" && !showSetNewPassword) {
-      // Don't show misleading toast - wait for PASSWORD_RECOVERY event
-    }
-  }, [user, navigate, searchParams, showSetNewPassword]);
+  }, [user, navigate, showSetNewPassword]);
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -220,7 +230,12 @@ const Auth = () => {
         title: "Success",
         description: "Password updated successfully! You can now sign in.",
       });
+      
+      // Clear the hash and reset state
+      window.location.hash = '';
+      recoveryHandled.current = false;
       setShowSetNewPassword(false);
+      
       // Sign out so user can log in with new password
       await supabase.auth.signOut();
     } catch (error) {
@@ -277,6 +292,8 @@ const Auth = () => {
                 variant="ghost"
                 className="w-full"
                 onClick={() => {
+                  window.location.hash = '';
+                  recoveryHandled.current = false;
                   setShowSetNewPassword(false);
                   supabase.auth.signOut();
                 }}
