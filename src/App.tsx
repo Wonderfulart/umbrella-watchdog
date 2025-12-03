@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import UserGuide from "./pages/UserGuide";
+import FormPage from "./pages/FormPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
               <UserGuide />
             </ProtectedRoute>
           } />
+          <Route path="/form/:templateId" element={<FormPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
