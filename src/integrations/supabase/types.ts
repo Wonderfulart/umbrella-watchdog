@@ -154,6 +154,220 @@ export type Database = {
         }
         Relationships: []
       }
+      form_fields: {
+        Row: {
+          conditional_logic: Json | null
+          created_at: string | null
+          default_value: string | null
+          ezlynx_mapping: string | null
+          field_type: Database["public"]["Enums"]["form_field_type"]
+          grid_cols: number | null
+          help_text: string | null
+          id: string
+          is_required: boolean | null
+          label: string
+          line_of_business:
+            | Database["public"]["Enums"]["line_of_business"][]
+            | null
+          name: string
+          options: Json | null
+          placeholder: string | null
+          section_id: string | null
+          sort_order: number
+          validation_rules: Json | null
+        }
+        Insert: {
+          conditional_logic?: Json | null
+          created_at?: string | null
+          default_value?: string | null
+          ezlynx_mapping?: string | null
+          field_type?: Database["public"]["Enums"]["form_field_type"]
+          grid_cols?: number | null
+          help_text?: string | null
+          id?: string
+          is_required?: boolean | null
+          label: string
+          line_of_business?:
+            | Database["public"]["Enums"]["line_of_business"][]
+            | null
+          name: string
+          options?: Json | null
+          placeholder?: string | null
+          section_id?: string | null
+          sort_order?: number
+          validation_rules?: Json | null
+        }
+        Update: {
+          conditional_logic?: Json | null
+          created_at?: string | null
+          default_value?: string | null
+          ezlynx_mapping?: string | null
+          field_type?: Database["public"]["Enums"]["form_field_type"]
+          grid_cols?: number | null
+          help_text?: string | null
+          id?: string
+          is_required?: boolean | null
+          label?: string
+          line_of_business?:
+            | Database["public"]["Enums"]["line_of_business"][]
+            | null
+          name?: string
+          options?: Json | null
+          placeholder?: string | null
+          section_id?: string | null
+          sort_order?: number
+          validation_rules?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_fields_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "form_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_sections: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_collapsible: boolean | null
+          is_expanded_default: boolean | null
+          label: string
+          line_of_business:
+            | Database["public"]["Enums"]["line_of_business"][]
+            | null
+          name: string
+          sort_order: number
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_collapsible?: boolean | null
+          is_expanded_default?: boolean | null
+          label: string
+          line_of_business?:
+            | Database["public"]["Enums"]["line_of_business"][]
+            | null
+          name: string
+          sort_order?: number
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_collapsible?: boolean | null
+          is_expanded_default?: boolean | null
+          label?: string
+          line_of_business?:
+            | Database["public"]["Enums"]["line_of_business"][]
+            | null
+          name?: string
+          sort_order?: number
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_sections_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "form_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_submissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          policy_id: string | null
+          status: string | null
+          submission_data: Json
+          submitted_at: string | null
+          submitted_by: string | null
+          template_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          policy_id?: string | null
+          status?: string | null
+          submission_data?: Json
+          submitted_at?: string | null
+          submitted_by?: string | null
+          template_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          policy_id?: string | null
+          status?: string | null
+          submission_data?: Json
+          submitted_at?: string | null
+          submitted_by?: string | null
+          template_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_submissions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "form_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_master: boolean | null
+          line_of_business: Database["public"]["Enums"]["line_of_business"][]
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_master?: boolean | null
+          line_of_business?: Database["public"]["Enums"]["line_of_business"][]
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_master?: boolean | null
+          line_of_business?: Database["public"]["Enums"]["line_of_business"][]
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       policies: {
         Row: {
           agent_company_logo_url: string | null
@@ -289,6 +503,21 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "agent"
+      form_field_type:
+        | "text"
+        | "select"
+        | "date"
+        | "checkbox"
+        | "textarea"
+        | "number"
+        | "phone"
+        | "email"
+        | "ssn"
+        | "vin"
+        | "currency"
+        | "radio"
+        | "multiselect"
+      line_of_business: "auto" | "home" | "dwelling" | "commercial"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -417,6 +646,22 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "agent"],
+      form_field_type: [
+        "text",
+        "select",
+        "date",
+        "checkbox",
+        "textarea",
+        "number",
+        "phone",
+        "email",
+        "ssn",
+        "vin",
+        "currency",
+        "radio",
+        "multiselect",
+      ],
+      line_of_business: ["auto", "home", "dwelling", "commercial"],
     },
   },
 } as const
