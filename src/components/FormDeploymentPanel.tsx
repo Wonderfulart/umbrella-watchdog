@@ -110,12 +110,12 @@ export function FormDeploymentPanel({ policies = [] }: FormDeploymentPanelProps)
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Link to Policy (Optional)</label>
-                      <Select value={selectedPolicyId} onValueChange={setSelectedPolicyId}>
+                      <Select value={selectedPolicyId} onValueChange={(val) => setSelectedPolicyId(val === 'none' ? '' : val)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a policy to pre-fill" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No policy selected</SelectItem>
+                          <SelectItem value="none">No policy selected</SelectItem>
                           {policies.map((policy) => (
                             <SelectItem key={policy.id} value={policy.id}>
                               {policy.policy_number} - {policy.client_first_name}
