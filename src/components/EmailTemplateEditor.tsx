@@ -160,8 +160,8 @@ export const EmailTemplateEditor = () => {
           }}
         >
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="reminder1">First Reminder</TabsTrigger>
-            <TabsTrigger value="reminder2">Follow-up Reminder</TabsTrigger>
+            <TabsTrigger value="email1">First Reminder</TabsTrigger>
+            <TabsTrigger value="email2">Follow-up Reminder</TabsTrigger>
           </TabsList>
 
           {templates.map((template) => (
