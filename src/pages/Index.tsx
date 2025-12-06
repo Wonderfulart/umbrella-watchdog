@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { PolicySummaryCards } from "@/components/PolicySummaryCards";
 import { PolicyTable } from "@/components/PolicyTable";
 import { AddPolicyDialog } from "@/components/AddPolicyDialog";
@@ -46,8 +47,7 @@ const Index = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // Admin mode enabled by default (no auth)
-  const isAdmin = true;
+  const { isAdmin } = useAuth();
 
   const fetchPolicies = async () => {
     try {
