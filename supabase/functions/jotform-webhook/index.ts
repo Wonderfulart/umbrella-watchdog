@@ -8,6 +8,7 @@ const corsHeaders = {
 interface JotFormPayload {
   submissionID?: string;
   formID?: string;
+  webhookSecret?: string;
   rawRequest?: {
     policyNumber?: string;
     typeA?: string;
@@ -25,6 +26,23 @@ Deno.serve(async (req) => {
 
     // Parse the incoming request
     const payload: JotFormPayload = await req.json();
+    
+    // Validate webhook secret to prevent unauthorized calls
+    const expectedSecret = Deno.env.get('JOTFORM_WEBHOOK_SECRET');
+    if (expectedSecret) {
+      const providedSecret = payload.webhookSecret || req.headers.get('x-webhook-secret');
+      if (providedSecret !== expectedSecret) {
+        console.error('Invalid or missing webhook secret');
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized - Invalid webhook secret' }),
+          { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    }
+    
     console.log('Payload received:', JSON.stringify(payload, null, 2));
 
     // Extract policy number from the payload

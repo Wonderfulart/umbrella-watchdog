@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Mail, Save, Eye } from "lucide-react";
+import DOMPurify from "dompurify";
 import {
   Dialog,
   DialogContent,
@@ -119,10 +120,16 @@ export const EmailTemplateEditor = () => {
       preview = preview.replace(new RegExp(`{{${key}}}`, "g"), value);
     });
 
+    // Sanitize HTML to prevent XSS attacks
+    const sanitizedPreview = DOMPurify.sanitize(preview, {
+      ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'strong', 'em', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'div', 'span'],
+      ALLOWED_ATTR: ['href', 'target', 'style', 'class']
+    });
+
     return (
       <div
         className="prose max-w-none p-6 bg-background border rounded-lg"
-        dangerouslySetInnerHTML={{ __html: preview }}
+        dangerouslySetInnerHTML={{ __html: sanitizedPreview }}
       />
     );
   };
