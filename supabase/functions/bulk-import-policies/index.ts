@@ -13,6 +13,7 @@ interface PolicyImportRow {
 interface ImportRequest {
   policies: PolicyImportRow[];
   columnMapping: Record<string, string>;
+  updateMode?: boolean;
 }
 
 serve(async (req) => {
@@ -25,9 +26,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { policies, columnMapping }: ImportRequest = await req.json();
+    const { policies, columnMapping, updateMode = false }: ImportRequest = await req.json();
 
-    console.log(`Starting bulk import of ${policies.length} policies`);
+    console.log(`Starting bulk import of ${policies.length} policies (updateMode: ${updateMode})`);
 
     // Fetch active agents
     const { data: agents, error: agentsError } = await supabase
@@ -53,8 +54,28 @@ serve(async (req) => {
 
     const results = {
       imported: 0,
+      updated: 0,
       skipped: 0,
       errors: [] as Array<{ row: number; error: string }>,
+    };
+
+    // Helper function to fix scientific notation (e.g., "6.17E+12" -> "6170000000000")
+    const fixScientificNotation = (value: any): string => {
+      if (value === null || value === undefined) return "";
+      
+      const strValue = String(value);
+      
+      // Check if it's in scientific notation format
+      if (/^-?\d+\.?\d*[eE][+-]?\d+$/.test(strValue)) {
+        // Convert scientific notation to full number string
+        const num = parseFloat(strValue);
+        if (!isNaN(num)) {
+          // Use toFixed(0) to get integer representation, then remove trailing zeros if needed
+          return num.toLocaleString('fullwide', { useGrouping: false });
+        }
+      }
+      
+      return strValue;
     };
 
     // Helper function to convert Excel serial date to YYYY-MM-DD
@@ -94,10 +115,13 @@ serve(async (req) => {
       const row = policies[i];
 
       try {
-        // Map columns to database fields
+        // Map columns to database fields with scientific notation fix
+        const policyNumber = fixScientificNotation(row[columnMapping.policy_number]);
+        const customerNumber = fixScientificNotation(row[columnMapping.customer_number]);
+
         const policyData = {
-          customer_number: String(row[columnMapping.customer_number]),
-          policy_number: String(row[columnMapping.policy_number]),
+          customer_number: customerNumber,
+          policy_number: policyNumber,
           client_first_name: row[columnMapping.client_first_name],
           client_email: row[columnMapping.client_email],
           agent_email: row[columnMapping.agent_email],
@@ -122,7 +146,7 @@ serve(async (req) => {
           }
         }
 
-        // Check for duplicates
+        // Check for existing policy
         const { data: existing } = await supabase
           .from("policies")
           .select("id")
@@ -130,12 +154,28 @@ serve(async (req) => {
           .single();
 
         if (existing) {
-          console.log(`Skipping duplicate policy: ${policyData.policy_number}`);
-          results.skipped++;
+          if (updateMode) {
+            // Update existing policy
+            const { error: updateError } = await supabase
+              .from("policies")
+              .update({
+                ...policyData,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existing.id);
+
+            if (updateError) throw updateError;
+
+            console.log(`Updated policy: ${policyData.policy_number}`);
+            results.updated++;
+          } else {
+            console.log(`Skipping duplicate policy: ${policyData.policy_number}`);
+            results.skipped++;
+          }
           continue;
         }
 
-        // Assign agent in round-robin fashion
+        // Assign agent in round-robin fashion for new policies
         const assignedAgent = agents[currentIndex % agents.length];
         currentIndex++;
 
@@ -143,7 +183,7 @@ serve(async (req) => {
         const baseUrl = "https://form.jotform.com/250873904844061";
         const submissionLink = `${baseUrl}?policyNumber=${encodeURIComponent(policyData.policy_number)}&typeA=${encodeURIComponent(policyData.customer_number)}`;
 
-        // Insert policy with agent assignment
+        // Insert new policy with agent assignment
         const { error: insertError } = await supabase.from("policies").insert([
           {
             ...policyData,
@@ -178,7 +218,7 @@ serve(async (req) => {
       .update({ last_assigned_agent_index: currentIndex })
       .eq("id", config.id);
 
-    console.log(`Import complete: ${results.imported} imported, ${results.skipped} skipped, ${results.errors.length} errors`);
+    console.log(`Import complete: ${results.imported} imported, ${results.updated} updated, ${results.skipped} skipped, ${results.errors.length} errors`);
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
