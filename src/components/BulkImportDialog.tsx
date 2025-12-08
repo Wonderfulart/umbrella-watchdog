@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileSpreadsheet, Users } from "lucide-react";
+import { Upload, FileSpreadsheet, Users, RefreshCw } from "lucide-react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { ColumnMapper } from "./ColumnMapper";
@@ -31,7 +33,13 @@ export const BulkImportDialog = ({ onImportComplete }: { onImportComplete: () =>
   const [importing, setImporting] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [nextAgentIndex, setNextAgentIndex] = useState(0);
-  const [importResults, setImportResults] = useState<{ imported: number; agentAssignments: Record<string, number> } | null>(null);
+  const [updateMode, setUpdateMode] = useState(false);
+  const [importResults, setImportResults] = useState<{ 
+    imported: number; 
+    updated: number;
+    skipped: number;
+    agentAssignments: Record<string, number> 
+  } | null>(null);
   const { toast } = useToast();
 
   // Fetch agents and round-robin index when dialog opens
@@ -129,7 +137,7 @@ export const BulkImportDialog = ({ onImportComplete }: { onImportComplete: () =>
     setImportResults(null);
     try {
       const { data, error } = await supabase.functions.invoke("bulk-import-policies", {
-        body: { policies: parsedData, columnMapping },
+        body: { policies: parsedData, columnMapping, updateMode },
       });
 
       if (error) throw error;
@@ -146,14 +154,25 @@ export const BulkImportDialog = ({ onImportComplete }: { onImportComplete: () =>
         }
       }
 
-      setImportResults({ imported: data.imported, agentAssignments });
+      setImportResults({ 
+        imported: data.imported, 
+        updated: data.updated || 0,
+        skipped: data.skipped || 0,
+        agentAssignments 
+      });
+
+      const parts = [];
+      if (data.imported > 0) parts.push(`${data.imported} imported`);
+      if (data.updated > 0) parts.push(`${data.updated} updated`);
+      if (data.skipped > 0) parts.push(`${data.skipped} skipped`);
+      if (data.errors?.length > 0) parts.push(`${data.errors.length} errors`);
 
       toast({
         title: "Import Complete",
-        description: `Successfully imported ${data.imported} policies. ${data.skipped} duplicates skipped. ${data.errors.length} errors.`,
+        description: parts.join(", "),
       });
 
-      if (data.errors.length > 0) {
+      if (data.errors?.length > 0) {
         console.error("Import errors:", data.errors);
       }
 
@@ -178,6 +197,7 @@ export const BulkImportDialog = ({ onImportComplete }: { onImportComplete: () =>
     setColumnMapping({});
     setStep("upload");
     setImportResults(null);
+    setUpdateMode(false);
   };
 
   const getNextAgent = (): Agent | null => {
@@ -226,11 +246,22 @@ export const BulkImportDialog = ({ onImportComplete }: { onImportComplete: () =>
         {importResults && (
           <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
             <h4 className="font-medium text-green-800 dark:text-green-200 mb-2">
-              Import Successful - {importResults.imported} Policies Imported
+              Import Complete
             </h4>
+            <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
+              {importResults.imported > 0 && (
+                <p>✓ {importResults.imported} new {importResults.imported === 1 ? 'policy' : 'policies'} imported</p>
+              )}
+              {importResults.updated > 0 && (
+                <p>✓ {importResults.updated} existing {importResults.updated === 1 ? 'policy' : 'policies'} updated</p>
+              )}
+              {importResults.skipped > 0 && (
+                <p className="text-muted-foreground">○ {importResults.skipped} {importResults.skipped === 1 ? 'duplicate' : 'duplicates'} skipped</p>
+              )}
+            </div>
             {Object.keys(importResults.agentAssignments).length > 0 && (
-              <div className="text-sm text-green-700 dark:text-green-300">
-                <p className="font-medium mb-1">Agent Assignments:</p>
+              <div className="text-sm text-green-700 dark:text-green-300 mt-3">
+                <p className="font-medium mb-1">Agent Assignments (new policies):</p>
                 <ul className="list-disc list-inside">
                   {Object.entries(importResults.agentAssignments).map(([agent, count]) => (
                     <li key={agent}>{agent}: {count} {count === 1 ? 'policy' : 'policies'}</li>
@@ -270,6 +301,25 @@ export const BulkImportDialog = ({ onImportComplete }: { onImportComplete: () =>
                 </Button>
               </label>
               {file && <p className="mt-2 text-sm text-muted-foreground">{file.name}</p>}
+            </div>
+
+            {/* Update Mode Toggle */}
+            <div className="flex items-start space-x-3 p-4 border rounded-lg bg-muted/30">
+              <Checkbox 
+                id="update-mode" 
+                checked={updateMode}
+                onCheckedChange={(checked) => setUpdateMode(checked === true)}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="update-mode" className="flex items-center gap-2 cursor-pointer">
+                  <RefreshCw className="h-4 w-4" />
+                  Update existing policies
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, policies with matching policy numbers will be updated instead of skipped. 
+                  New policies will still be imported normally.
+                </p>
+              </div>
             </div>
           </div>
         )}
