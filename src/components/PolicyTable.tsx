@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Search, Check, X } from "lucide-react";
 import { BulkActions } from "@/components/BulkActions";
 import {
   Pagination,
@@ -157,12 +157,13 @@ export const PolicyTable = ({ policies, onRefresh }: PolicyTableProps) => {
               <TableHead>Expiration Date</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Email Status</TableHead>
+              <TableHead>Form Submitted</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedPolicies.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground">
+                <TableCell colSpan={11} className="text-center text-muted-foreground">
                   No policies found
                 </TableCell>
               </TableRow>
@@ -196,6 +197,19 @@ export const PolicyTable = ({ policies, onRefresh }: PolicyTableProps) => {
                   <TableCell>{getStatusBadge(policy)}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {getEmailStatus(policy.email1_sent, policy.email2_sent)}
+                  </TableCell>
+                  <TableCell>
+                    {policy.jotform_submitted ? (
+                      <Badge className="bg-success text-success-foreground">
+                        <Check className="h-3 w-3 mr-1" />
+                        Yes
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        <X className="h-3 w-3 mr-1" />
+                        No
+                      </Badge>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
