@@ -11,9 +11,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
 import { Search, Check, X } from "lucide-react";
 import { BulkActions } from "@/components/BulkActions";
+import { PolicyRowActions } from "@/components/PolicyRowActions";
 import {
   Pagination,
   PaginationContent,
@@ -158,12 +158,13 @@ export const PolicyTable = ({ policies, onRefresh }: PolicyTableProps) => {
               <TableHead>Status</TableHead>
               <TableHead>Email Status</TableHead>
               <TableHead>Form Submitted</TableHead>
+              <TableHead className="w-12">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedPolicies.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center text-muted-foreground">
+                <TableCell colSpan={12} className="text-center text-muted-foreground">
                   No policies found
                 </TableCell>
               </TableRow>
@@ -210,6 +211,9 @@ export const PolicyTable = ({ policies, onRefresh }: PolicyTableProps) => {
                         No
                       </Badge>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <PolicyRowActions policy={policy} onActionComplete={handleActionComplete} />
                   </TableCell>
                 </TableRow>
               ))
