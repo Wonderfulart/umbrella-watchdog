@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
       .from('policies')
       .select('*')
       .eq('email1_sent', true)
+      .eq('jotform_submitted', false) // Only send follow-ups to customers who haven't submitted the form
       .not('email1_sent_date', 'is', null)
       .lte('email1_sent_date', sevenDaysAgo.toISOString())
       .or('email2_sent.is.null,email2_sent.eq.false');
